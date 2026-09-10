@@ -1,0 +1,149 @@
+// BuyWater – Prisma schema (SQLite)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Use "postgresql" on Render. For local SQLite only, change to "sqlite" and DATABASE_URL="file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String?
+  username    String?
+  phone       String?
+  role        String   @default("USER") // USER | ADMIN
+  hostel      String?
+  customHostel String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  description String?
+  image       String?
+  category    String?
+  stock       Int      @default(100)
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+  customerName    String
+  username        String?
+  phone           String
+  email           String?
+  address         String
+  hostel          String?
+  customHostel    String?
+  roomNumber      String?
+  blockNumber     String?
+  products        String   // JSON string of items
+  gallons         Int      @default(1)
+  totalAmount     Float
+  paymentMethod   String   @default("cash_on_delivery")
+  momoNumber      String?
+  momoReference   String?
+  status          String   @default("PENDING") // PENDING, PROCESSING, CONFIRMED, ON_THE_WAY, DELIVERED, CANCELLED
+  isSubscription  Boolean  @default(false)
+  notes           String?
+  deliveryNotes   String?
+  cancelReason    String?
+  driverName      String?
+  driverPhone     String?
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Hostel {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model AppSettings {
+  id                   String  @id @default(cuid())
+  serviceActive        Boolean @default(true)
+  maintenanceMode      Boolean @default(false)
+  maintenanceMessage   String?
+  heroTitle            String?
+  operatingHours       String?
+  productImageUrl      String?
+  productDescription   String?
+  deliveryTimeMin      Int     @default(30)
+  deliveryTimeMax      Int     @default(60)
+  pricePerGallon       Float   @default(3)
+  subscriptionPrice    Float   @default(27)
+  subscriptionGallons  Int     @default(10)
+  cashEnabled          Boolean @default(true)
+  momoEnabled          Boolean @default(true)
+  momoNumber           String?
+  momoName             String?
+  momoNumber2          String?
+  momoName2            String?
+  adminPhone           String?
+  adminEmail           String?
+  serviceArea          String?
+  contentJson          String?
+  gallonSize           Int      @default(20)
+}
+
+
+model PromotionCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  active      Boolean  @default(true)
+  rewardValue Int      @default(1)
+  timesUsed   Int      @default(0)
+  maxUses     Int      @default(100)
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model Feedback {
+  id            String   @id @default(cuid())
+  userEmail     String?
+  userName      String?
+  message       String
+  status        String   @default("open") // open, responded, closed
+  adminResponse String?
+  createdAt     DateTime @default(now())
+}
+
+model ServiceZone {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  type      String   @default("info")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
