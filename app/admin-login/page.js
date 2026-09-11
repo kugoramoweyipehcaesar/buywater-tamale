@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Loader2, Shield } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("kugoramoweyipehcaesar49@gmail.com");
-  const [password, setPassword] = useState("Dominion4244");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminPassword");
+      localStorage.removeItem("buywater_admin");
+      sessionStorage.removeItem("adminEmail");
+      sessionStorage.removeItem("adminPassword");
+    } catch (_) {}
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -21,7 +31,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -35,7 +45,7 @@ export default function AdminLoginPage() {
       router.push("/admin");
       router.refresh();
     } catch {
-      setError("Network error – run: npm run db:setup then npm run dev");
+      setError("Network error – check your connection");
     } finally {
       setLoading(false);
     }
@@ -64,35 +74,84 @@ export default function AdminLoginPage() {
             {error}
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          autoComplete="off"
+          method="post"
+        >
+          <input
+            type="text"
+            name="fake-username"
+            autoComplete="username"
+            tabIndex={-1}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              width: 1,
+              height: 1,
+              opacity: 0,
+            }}
+          />
+          <input
+            type="password"
+            name="fake-password"
+            autoComplete="current-password"
+            tabIndex={-1}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              width: 1,
+              height: 1,
+              opacity: 0,
+            }}
+          />
+
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0B2545]">Admin Email</label>
+            <label className="mb-1.5 block text-sm font-medium text-[#0B2545]">
+              Admin Email
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="email"
+                name="admin_email_field"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
+                placeholder="Enter admin email"
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#0077C8] focus:ring-2 focus:ring-[#0077C8]/20"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0B2545]">Password</label>
+            <label className="mb-1.5 block text-sm font-medium text-[#0B2545]">
+              Password
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type={showPw ? "text" : "password"}
+                name="admin_password_field"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                placeholder="Enter password"
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[#0077C8] focus:ring-2 focus:ring-[#0077C8]/20"
               />
               <button
                 type="button"
-                onClick={() => setShowPw(!showPw)}
+                onClick={() => setShowPw((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                tabIndex={-1}
               >
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -103,17 +162,14 @@ export default function AdminLoginPage() {
             disabled={loading}
             className="flex w-full items-center justify-center rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white hover:bg-[#0066AD] disabled:opacity-60"
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Admin Login"}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign in as Admin"}
           </button>
         </form>
       </div>
 
-      <p className="mt-6 text-sm text-slate-600">
-        Not an admin?{" "}
-        <Link href="/login" className="font-semibold text-[#0077C8] hover:underline">
-          User Login
-        </Link>
-      </p>
+      <Link href="/" className="mt-6 text-sm font-medium text-[#0077C8] hover:underline">
+        ← Back to site
+      </Link>
     </div>
   );
 }
