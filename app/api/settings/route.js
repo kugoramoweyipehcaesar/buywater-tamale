@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
@@ -78,6 +79,8 @@ export async function GET() {
           operatingHours: "7 AM - 8:30 PM DAILY",
           heroTitle: "Fresh Water Delivered",
           serviceArea: "Tamale UDS and environs",
+          adminPhone: "0531448824",
+          momoNumber: "0502748671",
         },
       });
     }
@@ -105,7 +108,18 @@ export async function PATCH(request) {
         data: body,
       });
     }
-    return NextResponse.json({ settings, success: true });
+
+    // Live site-wide refresh
+    try {
+      revalidatePath("/");
+      revalidatePath("/order");
+      revalidatePath("/dashboard");
+      revalidatePath("/admin");
+    } catch (e) {
+      console.warn("revalidatePath", e.message);
+    }
+
+    return NextResponse.json({ settings, success: true, live: true });
   } catch (e) {
     console.error("settings PATCH", e);
     const status = e.status || 500;
