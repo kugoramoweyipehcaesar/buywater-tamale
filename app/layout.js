@@ -1,5 +1,6 @@
 import "./globals.css";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import ThemeProvider from "@/components/ThemeProvider";
 
 export const metadata = {
   title: "BuyWater – Fresh Water Delivered | Tamale",
@@ -8,10 +9,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>
-        {children}
-        <WhatsAppFloat />
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen transition-colors duration-300">
+        <ThemeProvider>
+          {children}
+          <WhatsAppFloat />
+        </ThemeProvider>
       </body>
     </html>
   );
