@@ -14,6 +14,7 @@ export async function GET() {
         phone: true,
         role: true,
         hostel: true,
+        profilePhoto: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },

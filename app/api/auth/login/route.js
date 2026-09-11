@@ -28,7 +28,6 @@ export async function POST(request) {
       );
     }
 
-    // Constant-ish timing: always hash-check path
     const user = await prisma.user.findUnique({ where: { email } });
     const dummyHash =
       "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
@@ -54,6 +53,7 @@ export async function POST(request) {
       role: user.role,
       hostel: user.hostel,
       customHostel: user.customHostel,
+      profilePhoto: user.profilePhoto,
     };
 
     notifyAdminLogin({
@@ -61,6 +61,7 @@ export async function POST(request) {
       name: user.name || user.username,
       role: user.role,
       when: new Date().toLocaleString("en-GB", { timeZone: "Africa/Accra" }),
+      ip,
     }).catch((e) => console.error("login notify failed", e));
 
     const res = NextResponse.json({ user: safeUser });

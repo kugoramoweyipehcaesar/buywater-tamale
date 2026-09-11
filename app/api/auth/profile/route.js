@@ -17,6 +17,7 @@ export async function PATCH(request) {
         phone: body.phone,
         hostel: body.hostel,
         customHostel: body.customHostel,
+        ...(body.profilePhoto !== undefined && { profilePhoto: body.profilePhoto }),
       },
       select: {
         id: true,
@@ -27,6 +28,7 @@ export async function PATCH(request) {
         role: true,
         hostel: true,
         customHostel: true,
+        profilePhoto: true,
       },
     });
     return NextResponse.json({ user });
