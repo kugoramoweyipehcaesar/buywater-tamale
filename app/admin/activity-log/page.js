@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SiteHeader from "@/components/SiteHeader";
 import {
@@ -14,13 +14,16 @@ import {
 const ACTIONS = [
   "",
   "LOGIN",
+  "LOGIN_BLOCKED",
   "REGISTER",
   "ORDER_CREATED",
   "ORDER_STATUS",
   "PROFILE_UPDATE",
+  "PASSWORD_RESET",
   "BAN",
   "INVITE",
   "DELETE_ACCOUNT",
+  "ORDERS_RESET",
 ];
 
 export default function ActivityLogPage() {
@@ -34,9 +37,13 @@ export default function ActivityLogPage() {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [live, setLive] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const silent = useRef(false);
 
   const load = useCallback(async () => {
     try {
+      if (!silent.current) setLoading(true);
       const me = await fetch("/api/auth/me").then((r) => r.json());
       if (!me.user || me.user.role !== "ADMIN") {
         router.push("/admin-login");
@@ -56,16 +63,28 @@ export default function ActivityLogPage() {
       );
       setLogs(res.logs || []);
       setTotalPages(res.totalPages || 1);
+      setLastRefresh(new Date());
     } catch {
       router.push("/admin-login");
     } finally {
       setLoading(false);
+      silent.current = false;
     }
   }, [router, page, action, q, from, to]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Near real-time: poll every 12s when Live is on
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(() => {
+      silent.current = true;
+      load();
+    }, 12000);
+    return () => clearInterval(t);
+  }, [live, load]);
 
   function exportCsv() {
     const header = "Time,Email,Action,Details,IP\n";
@@ -89,7 +108,7 @@ export default function ActivityLogPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) {
+  if (loading && logs.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center text-slate-500">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -112,17 +131,40 @@ export default function ActivityLogPage() {
                 User Activity Log
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400">
-                Historical feed of sign-ups, updates, and orders
+                Live feed of sign-ups, logins, orders, and admin actions
+                {lastRefresh && (
+                  <span className="ml-1 text-[11px] text-slate-400">
+                    · updated {lastRefresh.toLocaleTimeString()}
+                  </span>
+                )}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-          >
-            <Download className="h-3.5 w-3.5" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setLive((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                live
+                  ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+                  : "border border-slate-200 bg-white text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  live ? "animate-pulse bg-green-500" : "bg-slate-400"
+                }`}
+              />
+              {live ? "Live" : "Paused"}
+            </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </button>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -176,7 +218,7 @@ export default function ActivityLogPage() {
         <div className="space-y-3">
           {logs.length === 0 && (
             <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-slate-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              No activity yet
+              No activity yet — new events appear here within ~12s
             </div>
           )}
           {logs.map((l) => (

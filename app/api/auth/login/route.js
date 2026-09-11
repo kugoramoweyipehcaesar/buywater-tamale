@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { comparePassword, signToken, TOKEN_NAME } from "@/lib/auth";
 import { notifyAdminLogin } from "@/lib/email";
 import { rateLimit, normalizeEmail, clientIp } from "@/lib/security";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function POST(request) {
   try {
@@ -43,6 +44,20 @@ export async function POST(request) {
       );
     }
 
+    if (user.banned) {
+      await logActivity({
+        userId: user.id,
+        email: user.email,
+        action: "LOGIN_BLOCKED",
+        details: "Banned user attempted login",
+        ip,
+      });
+      return NextResponse.json(
+        { error: "This account has been suspended. Contact support." },
+        { status: 403 }
+      );
+    }
+
     const token = signToken(user);
     const safeUser = {
       id: user.id,
@@ -55,6 +70,14 @@ export async function POST(request) {
       customHostel: user.customHostel,
       profilePhoto: user.profilePhoto,
     };
+
+    await logActivity({
+      userId: user.id,
+      email: user.email,
+      action: "LOGIN",
+      details: `Logged in as ${user.role}`,
+      ip,
+    });
 
     notifyAdminLogin({
       email: user.email,

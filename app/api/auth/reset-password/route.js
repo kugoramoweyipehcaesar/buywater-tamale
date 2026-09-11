@@ -8,6 +8,7 @@ import {
   clientIp,
   sanitizeText,
 } from "@/lib/security";
+import { logActivity } from "@/lib/activityLogger";
 
 export async function POST(request) {
   try {
@@ -68,6 +69,13 @@ export async function POST(request) {
         data: { used: true },
       }),
     ]);
+
+    await logActivity({
+      email,
+      action: "PASSWORD_RESET",
+      details: "Password reset completed",
+      ip,
+    });
 
     return NextResponse.json({
       success: true,

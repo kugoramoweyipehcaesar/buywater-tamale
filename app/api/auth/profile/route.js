@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
+import { clientIp } from "@/lib/security";
 
 export async function PATCH(request) {
   try {
@@ -31,6 +33,16 @@ export async function PATCH(request) {
         profilePhoto: true,
       },
     });
+
+    const ip = clientIp(request);
+    await logActivity({
+      userId: user.id,
+      email: user.email,
+      action: "PROFILE_UPDATE",
+      details: "Profile updated",
+      ip,
+    });
+
     return NextResponse.json({ user });
   } catch (e) {
     return NextResponse.json({ error: e.message || "Server error" }, { status: 500 });

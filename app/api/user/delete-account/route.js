@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, TOKEN_NAME } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/activityLogger";
+import { clientIp } from "@/lib/security";
 
 export async function DELETE(request) {
   try {
@@ -25,6 +27,15 @@ export async function DELETE(request) {
         { status: 400 }
       );
     }
+
+    const ip = clientIp(request);
+    await logActivity({
+      userId: user.id,
+      email: user.email,
+      action: "DELETE_ACCOUNT",
+      details: `Account deleted · ${user.email}`,
+      ip,
+    });
 
     // Delete related data
     await prisma.order.deleteMany({

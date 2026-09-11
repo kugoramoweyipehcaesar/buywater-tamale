@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { notifyAdminOrderCancelled } from "@/lib/email";
+import { logActivity } from "@/lib/activityLogger";
+import { clientIp } from "@/lib/security";
 
 export async function GET(request, { params }) {
   try {
@@ -56,10 +58,26 @@ export async function PATCH(request, { params }) {
 
     const order = await prisma.order.update({ where: { id }, data });
 
+    const ip = clientIp(request);
     if (data.status === "CANCELLED") {
+      await logActivity({
+        userId: user.id,
+        email: user.email,
+        action: "ORDER_STATUS",
+        details: `Cancelled ${order.orderNumber}${data.cancelReason ? ` · ${data.cancelReason}` : ""}`,
+        ip,
+      });
       notifyAdminOrderCancelled(order).catch((err) =>
         console.error("cancel notify failed", err)
       );
+    } else if (data.status) {
+      await logActivity({
+        userId: user.id,
+        email: user.email,
+        action: "ORDER_STATUS",
+        details: `${order.orderNumber} → ${data.status}`,
+        ip,
+      });
     }
 
     return NextResponse.json({ order });

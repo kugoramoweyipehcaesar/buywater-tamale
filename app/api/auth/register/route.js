@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken, TOKEN_NAME } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
+import { clientIp } from "@/lib/security";
 
 export async function POST(request) {
   try {
@@ -46,6 +48,15 @@ export async function POST(request) {
         customHostel,
         role: "USER",
       },
+    });
+
+    const ip = clientIp(request);
+    await logActivity({
+      userId: user.id,
+      email: user.email,
+      action: "REGISTER",
+      details: `New account · ${name || email}`,
+      ip,
     });
 
     const token = signToken(user);

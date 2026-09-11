@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { notifyAdminOrderPlaced } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activityLogger";
+import { clientIp } from "@/lib/security";
 
 function genOrderNumber() {
   return "BW-" + Math.floor(10000 + Math.random() * 90000);
@@ -76,6 +78,15 @@ export async function POST(request) {
         deliveryNotes: body.deliveryNotes || "",
         userId: user?.id || null,
       },
+    });
+
+    const ip = clientIp(request);
+    await logActivity({
+      userId: user?.id || null,
+      email: order.email || user?.email || null,
+      action: "ORDER_CREATED",
+      details: `Order ${order.orderNumber} — ${order.gallons} gal · Ghc${Number(order.totalAmount).toFixed(2)}${order.hostel ? ` · ${order.hostel}` : ""}`,
+      ip,
     });
 
     // Instant email to super admin
