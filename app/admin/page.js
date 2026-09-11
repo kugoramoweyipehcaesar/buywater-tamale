@@ -1,37 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import {
-  LayoutDashboard,
-  Package,
-  Settings,
-  Home,
-  Tag,
-  Megaphone,
-  Users,
-  Loader2,
-  RefreshCw,
-  Trash2,
-  Check,
+  LayoutDashboard, Package, Settings, Home, Tag, Megaphone, Users,
+  Loader2, RefreshCw, Trash2, Check, CreditCard, ClipboardCheck, Wrench, ListOrdered,
 } from "lucide-react";
 
 const SUPER = "kugoramoweyipehcaesar49@gmail.com";
 const STATUS = ["PENDING", "PROCESSING", "CONFIRMED", "ON_THE_WAY", "DELIVERED", "CANCELLED"];
+const ORDER_TABS = [
+  { id: "all", label: "All", match: null },
+  { id: "pending", label: "Pending", match: ["PENDING"] },
+  { id: "processing", label: "Processing", match: ["PROCESSING", "CONFIRMED", "ON_THE_WAY"] },
+  { id: "delivered", label: "Delivered", match: ["DELIVERED"] },
+  { id: "cancelled", label: "Cancelled", match: ["CANCELLED"] },
+];
 
-export default function AdminPage() {
+function AdminInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderStatus = (searchParams.get("status") || "all").toLowerCase();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [panel, setPanel] = useState("overview");
   const [toast, setToast] = useState("");
-  const [showResetOrders, setShowResetOrders] = useState(false);
-  const [resettingOrders, setResettingOrders] = useState(false);
   const [busy, setBusy] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [settings, setSettings] = useState(null);
   const [form, setForm] = useState({});
   const [hostels, setHostels] = useState([]);
   const [promos, setPromos] = useState([]);
@@ -49,10 +46,7 @@ export default function AdminPage() {
   const loadAll = useCallback(async () => {
     try {
       const me = await fetch("/api/auth/me").then((r) => r.json());
-      if (!me.user || me.user.role !== "ADMIN") {
-        router.push("/login");
-        return;
-      }
+      if (!me.user || me.user.role !== "ADMIN") { router.push("/admin-login"); return; }
       setUser(me.user);
       const [ord, set, hos, pro, ann, us] = await Promise.all([
         fetch("/api/orders").then((r) => r.json()),
@@ -64,11 +58,8 @@ export default function AdminPage() {
       ]);
       setOrders(ord.orders || []);
       const s = set.settings || {};
-      setSettings(s);
       setForm({
         serviceActive: s.serviceActive !== false,
-        maintenanceMode: !!s.maintenanceMode,
-        maintenanceMessage: s.maintenanceMessage || "",
         heroTitle: s.heroTitle || "",
         operatingHours: s.operatingHours || "",
         pricePerGallon: s.pricePerGallon ?? 2.5,
@@ -76,14 +67,9 @@ export default function AdminPage() {
         subscriptionGallons: s.subscriptionGallons ?? 10,
         deliveryTimeMin: s.deliveryTimeMin ?? 45,
         deliveryTimeMax: s.deliveryTimeMax ?? 60,
-        cashEnabled: s.cashEnabled !== false,
-        momoEnabled: s.momoEnabled !== false,
-        momoNumber: s.momoNumber || "",
-        momoName: s.momoName || "",
         adminPhone: s.adminPhone || "",
         adminEmail: s.adminEmail || "",
         serviceArea: s.serviceArea || "",
-        productDescription: s.productDescription || "",
       });
       setHostels(hos.hostels || []);
       setPromos(pro.promos || []);
@@ -91,15 +77,38 @@ export default function AdminPage() {
       setUsers(us.users || []);
     } catch (e) {
       console.error(e);
-      router.push("/login");
+      router.push("/admin-login");
     } finally {
       setLoading(false);
     }
   }, [router]);
 
+  useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    if (searchParams.get("panel") === "orders") setPanel("orders");
+  }, [searchParams]);
+
+  const counts = useMemo(() => {
+    const c = { all: orders.length, pending: 0, processing: 0, delivered: 0, cancelled: 0 };
+    for (const o of orders) {
+      if (o.status === "PENDING") c.pending++;
+      else if (["PROCESSING", "CONFIRMED", "ON_THE_WAY"].includes(o.status)) c.processing++;
+      else if (o.status === "DELIVERED") c.delivered++;
+      else if (o.status === "CANCELLED") c.cancelled++;
+    }
+    return c;
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    const tab = ORDER_TABS.find((t) => t.id === orderStatus) || ORDER_TABS[0];
+    if (!tab.match) return orders;
+    return orders.filter((o) => tab.match.includes(o.status));
+  }, [orders, orderStatus]);
+
+  function setOrderTab(id) {
+    router.push(id === "all" ? "/admin?panel=orders" : `/admin?panel=orders&status=${id}`);
+    setPanel("orders");
+  }
 
   async function saveSettings() {
     setBusy(true);
@@ -111,7 +120,6 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      setSettings(data.settings);
       showToast("Saved — Live now");
       router.refresh();
       await loadAll();
@@ -130,10 +138,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Update failed");
-      }
+      if (!res.ok) throw new Error((await res.json()).error || "Update failed");
       showToast("Order updated — Live now");
       await loadAll();
     } catch (e) {
@@ -152,22 +157,6 @@ export default function AdminPage() {
       await loadAll();
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function resetAllOrders() {
-    setResettingOrders(true);
-    try {
-      const res = await fetch("/api/admin/orders/reset", { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reset failed");
-      setShowResetOrders(false);
-      showToast(`Deleted ${data.deleted} orders — Live now`);
-      await loadAll();
-    } catch (e) {
-      showToast(e.message || "Reset failed");
-    } finally {
-      setResettingOrders(false);
     }
   }
 
@@ -259,12 +248,8 @@ export default function AdminPage() {
     );
   }
 
-  const live = orders.filter((o) =>
-    ["PENDING", "PROCESSING", "CONFIRMED", "ON_THE_WAY"].includes(o.status)
-  );
-  const revenue = orders
-    .filter((o) => o.status === "DELIVERED")
-    .reduce((s, o) => s + Number(o.totalAmount || 0), 0);
+  const live = orders.filter((o) => ["PENDING", "PROCESSING", "CONFIRMED", "ON_THE_WAY"].includes(o.status));
+  const revenue = orders.filter((o) => o.status === "DELIVERED").reduce((s, o) => s + Number(o.totalAmount || 0), 0);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -276,41 +261,18 @@ export default function AdminPage() {
     { id: "users", label: "Users", icon: Users },
   ];
 
+  const tools = [
+    { href: "/admin/order-queue", label: "Order Queue", icon: ListOrdered, desc: "Live incoming queue" },
+    { href: "/admin/order-verification", label: "Verification", icon: ClipboardCheck, desc: "Approve / reject" },
+    { href: "/admin/payment-settings", label: "Payments", icon: CreditCard, desc: "Methods & MoMo" },
+    { href: "/admin/maintenance", label: "Maintenance", icon: Wrench, desc: "Mode & reset" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#EEF6FC] pb-16">
       <SiteHeader user={user} />
       {toast && (
-        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-[#0B2545] px-4 py-2 text-sm font-semibold text-white shadow-lg">
-          {toast}
-        </div>
-      )}
-
-      {showResetOrders && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#0B2545]">Reset all orders?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              This permanently deletes <strong>all orders</strong>. Users, admins, hostels and settings are kept. Cannot be undone.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                disabled={resettingOrders}
-                onClick={resetAllOrders}
-                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                {resettingOrders ? "Deleting…" : "Yes, delete all"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowResetOrders(false)}
-                className="rounded-xl border px-4 py-2.5 text-sm font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-[#0B2545] px-4 py-2 text-sm font-semibold text-white shadow-lg">{toast}</div>
       )}
 
       <main className="mx-auto max-w-3xl px-4 py-6">
@@ -324,12 +286,25 @@ export default function AdminPage() {
           </button>
         </div>
 
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {tools.map((t) => (
+            <Link key={t.href} href={t.href} className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition hover:border-[#0077C8]/40">
+              <t.icon className="mb-1.5 h-5 w-5 text-[#0077C8]" />
+              <p className="text-xs font-bold text-[#0B2545]">{t.label}</p>
+              <p className="text-[10px] text-slate-500">{t.desc}</p>
+            </Link>
+          ))}
+        </div>
+
         <div className="mb-5 flex gap-1 overflow-x-auto rounded-2xl bg-white p-1 shadow-sm">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
-              onClick={() => setPanel(t.id)}
+              onClick={() => {
+                setPanel(t.id);
+                if (t.id === "orders") router.push("/admin?panel=orders");
+              }}
               className={`flex shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold ${
                 panel === t.id ? "bg-[#0077C8] text-white" : "text-slate-500"
               }`}
@@ -349,53 +324,56 @@ export default function AdminPage() {
         )}
 
         {panel === "orders" && (
-          <div className="space-y-3">
-            {orders.length === 0 && <Empty>No orders yet</Empty>}
-            {orders.map((o) => (
-              <div key={o.id} className="rounded-2xl border bg-white p-4 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-bold text-[#0B2545]">{o.orderNumber}</p>
-                    <p className="text-sm text-slate-500">
-                      {o.customerName} · {o.phone} · {o.hostel || o.address}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {o.gallons} gal · Ghc{Number(o.totalAmount).toFixed(2)} · {o.paymentMethod}
-                    </p>
+          <div>
+            <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl border border-slate-100 bg-white p-1 shadow-sm">
+              {ORDER_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setOrderTab(t.id)}
+                  className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    orderStatus === t.id ? "bg-[#0077C8] text-white shadow" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {t.label} ({counts[t.id] ?? 0})
+                </button>
+              ))}
+            </div>
+            <div className="space-y-3">
+              {filteredOrders.length === 0 && <Empty>No orders in this filter</Empty>}
+              {filteredOrders.map((o) => (
+                <div key={o.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-[#0B2545]">{o.orderNumber}</p>
+                      <p className="text-sm text-slate-500">{o.customerName} · {o.phone} · {o.hostel || o.address}</p>
+                      <p className="text-sm text-slate-500">{o.gallons} gal · Ghc{Number(o.totalAmount).toFixed(2)} · {o.paymentMethod}</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">{o.status}</span>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">{o.status}</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <select value={o.status} onChange={(e) => updateOrder(o.id, e.target.value)} className="rounded-lg border px-2 py-1.5 text-xs">
+                      {STATUS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => deleteOrder(o.id)} className="rounded-lg border border-red-100 px-2 py-1.5 text-xs text-red-600">
+                      <Trash2 className="inline h-3 w-3" /> Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateOrder(o.id, e.target.value)}
-                    className="rounded-lg border px-2 py-1.5 text-xs"
-                  >
-                    {STATUS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={() => deleteOrder(o.id)} className="rounded-lg border border-red-100 px-2 py-1.5 text-xs text-red-600">
-                    <Trash2 className="inline h-3 w-3" /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
         {panel === "settings" && (
           <div className="space-y-3 rounded-2xl border bg-white p-5 shadow-sm">
+            <p className="text-xs text-slate-500">
+              Maintenance & order reset: <Link href="/admin/maintenance" className="font-semibold text-[#0077C8]">Maintenance</Link>.
+              Payments: <Link href="/admin/payment-settings" className="font-semibold text-[#0077C8]">Payment Settings</Link>.
+            </p>
             <Toggle label="Service active" checked={!!form.serviceActive} onChange={(v) => setForm((f) => ({ ...f, serviceActive: v }))} />
-            <Toggle label="Maintenance mode" checked={!!form.maintenanceMode} onChange={(v) => setForm((f) => ({ ...f, maintenanceMode: v }))} />
-            {form.maintenanceMode && (
-              <input
-                value={form.maintenanceMessage || ""}
-                onChange={(e) => setForm((f) => ({ ...f, maintenanceMessage: e.target.value }))}
-                placeholder="Maintenance message"
-                className="w-full rounded-xl border px-3 py-2.5 text-sm"
-              />
-            )}
             <Field label="Hero title" value={form.heroTitle} onChange={(v) => setForm((f) => ({ ...f, heroTitle: v }))} />
             <Field label="Operating hours" value={form.operatingHours} onChange={(v) => setForm((f) => ({ ...f, operatingHours: v }))} />
             <Field label="Service area" value={form.serviceArea} onChange={(v) => setForm((f) => ({ ...f, serviceArea: v }))} />
@@ -406,17 +384,9 @@ export default function AdminPage() {
               <Num label="Delivery min" value={form.deliveryTimeMin} onChange={(v) => setForm((f) => ({ ...f, deliveryTimeMin: v }))} />
               <Num label="Delivery max" value={form.deliveryTimeMax} onChange={(v) => setForm((f) => ({ ...f, deliveryTimeMax: v }))} />
             </div>
-            <Field label="MoMo number" value={form.momoNumber} onChange={(v) => setForm((f) => ({ ...f, momoNumber: v }))} />
             <Field label="Admin phone" value={form.adminPhone} onChange={(v) => setForm((f) => ({ ...f, adminPhone: v }))} />
             <Field label="Admin email" value={form.adminEmail} onChange={(v) => setForm((f) => ({ ...f, adminEmail: v }))} />
-            <Toggle label="Cash enabled" checked={!!form.cashEnabled} onChange={(v) => setForm((f) => ({ ...f, cashEnabled: v }))} />
-            <Toggle label="MoMo enabled" checked={!!form.momoEnabled} onChange={(v) => setForm((f) => ({ ...f, momoEnabled: v }))} />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={saveSettings}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white disabled:opacity-60"
-            >
+            <button type="button" disabled={busy} onClick={saveSettings} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white disabled:opacity-60">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Save — Live now
             </button>
@@ -495,26 +465,20 @@ export default function AdminPage() {
           </div>
         )}
 
-        {user?.email === SUPER && (
-          <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-4">
-            <p className="mb-2 text-sm font-semibold text-red-800">Danger zone</p>
-            <button
-              type="button"
-              onClick={() => setShowResetOrders(true)}
-              className="w-full rounded-xl border border-red-200 bg-white py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100"
-            >
-              Reset Orders (delete all)
-            </button>
-            <p className="mt-2 text-xs text-red-600/80">Super admin only. Users and settings are kept.</p>
-          </div>
-        )}
-
         <p className="mt-6 text-center text-xs text-slate-400">
           <Link href="/" className="text-[#0077C8]">← Back to site</Link>
           {" · "}Super admin: {user?.email}
         </p>
       </main>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-slate-500">Loading...</div>}>
+      <AdminInner />
+    </Suspense>
   );
 }
 
