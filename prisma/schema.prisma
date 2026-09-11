@@ -1,4 +1,4 @@
-// BuyWater – Prisma schema
+// BuyWater – Prisma schema (SQLite)
 generator client {
   provider = "prisma-client-js"
 }
@@ -101,6 +101,7 @@ model AppSettings {
   gallonSize           Int      @default(20)
 }
 
+
 model PromotionCode {
   id          String   @id @default(cuid())
   code        String   @unique
@@ -137,6 +138,7 @@ model Announcement {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
+
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
