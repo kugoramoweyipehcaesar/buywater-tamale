@@ -80,6 +80,7 @@ export default function AdminLoginPage() {
           autoComplete="off"
           method="post"
         >
+          {/* Dummy fields to defeat browser autofill */}
           <input
             type="text"
             name="fake-username"
