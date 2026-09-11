@@ -16,6 +16,7 @@ function decodeJwtPayload(token) {
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // Block common attack paths
   if (
     pathname.startsWith("/.env") ||
     pathname.includes("wp-admin") ||
@@ -25,6 +26,7 @@ export async function middleware(request) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Skip maintenance gate for these paths
   const skip =
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
@@ -59,6 +61,7 @@ export async function middleware(request) {
         }
       }
     } catch (e) {
+      // Don't block site if settings fetch fails
       console.warn("middleware maintenance check failed", e?.message);
     }
   }
