@@ -41,6 +41,14 @@ export default function HomePage() {
   const deliveryMax = settings?.deliveryTimeMax ?? 60;
   const subPrice = settings?.subscriptionPrice ?? 22;
   const subGallons = settings?.subscriptionGallons ?? 10;
+  const adminPhone = settings?.adminPhone || "0531448824";
+  const adminPhoneDigits = String(adminPhone).replace(/\D/g, "").replace(/^0/, "233");
+  const serviceArea = settings?.serviceArea || "Tamale UDS and environs";
+  const heroTitle = settings?.heroTitle || "Fresh Water Delivered";
+  const productDesc =
+    settings?.productDescription ||
+    "Hygienically produced, affordably priced water gallons delivered fresh to your hostel door.";
+  const momoNumber = settings?.momoNumber || "0502748671";
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -52,11 +60,17 @@ export default function HomePage() {
   const displayName =
     user?.name || user?.username || (user ? "there" : null);
 
+  // Same CTA for hero + bottom — both go to /order
+  const orderHref = "/order";
+  const orderCtaClassTop =
+    "inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0077C8] shadow hover:bg-slate-50";
+  const orderCtaClassBottom =
+    "mt-6 inline-flex items-center gap-2 rounded-full bg-[#0077C8] px-8 py-3.5 text-sm font-semibold text-white shadow-lg hover:bg-[#0066AD]";
+
   return (
     <div className="min-h-screen bg-[#F0F7FC]">
       <SiteHeader user={user} />
 
-      {/* ========== HERO (blue gradient) ========== */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#0077C8] to-[#005A9E] text-white">
         <div
           className="pointer-events-none absolute inset-0 opacity-30"
@@ -77,20 +91,17 @@ export default function HomePage() {
             </p>
           )}
           <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-            {settings?.heroTitle || "Fresh Water Delivered"}
+            {heroTitle}
           </h1>
           <p className="mt-2 text-base text-white/90 sm:text-lg">
             To your door in {deliveryMin}–{deliveryMax} minutes
           </p>
           <p className="mt-1 text-sm text-white/70">
-            Serving Tamale UDS and environs · Tamale, Northern Region, Ghana
+            Serving {serviceArea} · Tamale, Northern Region, Ghana
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={user ? "/order" : "/register"}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0077C8] shadow hover:bg-slate-50"
-            >
+            <Link href={orderHref} className={orderCtaClassTop}>
               <Droplets className="h-4 w-4" />
               Order Now — Ghc{price}/gallon
             </Link>
@@ -115,7 +126,7 @@ export default function HomePage() {
             </div>
             <div>
               <p className="text-sm font-bold leading-tight sm:text-base">
-                {hours.includes("DAILY") ? hours : `${hours}`}
+                {hours}
               </p>
               <p className="text-[11px] text-white/70 sm:text-xs">Daily Hours</p>
             </div>
@@ -123,14 +134,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== PRODUCT STRIP ========== */}
       <section className="bg-[#F0F7FC] py-14 text-center">
         <h2 className="text-2xl font-bold text-[#0B2545]">
           Premium 20-Liter Water Gallons
         </h2>
         <p className="mx-auto mt-2 max-w-xl px-4 text-sm text-slate-500">
-          {settings?.productDescription ||
-            "Hygienically produced, affordably priced water gallons delivered fresh to your hostel door."}
+          {productDesc}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-slate-600 shadow-sm">
@@ -153,7 +162,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== HOW IT WORKS ========== */}
       <section id="how-it-works" className="bg-white py-16">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-[#0B2545]">
@@ -200,7 +208,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== WHY CHOOSE ========== */}
       <section id="features" className="bg-[#F0F7FC] py-16">
         <div className="mx-auto max-w-4xl px-4">
           <div className="mb-2 text-center">
@@ -263,12 +270,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== SUPPORT ========== */}
       <section id="support" className="bg-white py-16">
         <div className="mx-auto max-w-3xl px-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <a
-              href="https://wa.me/233531448824"
+              href={`https://wa.me/${adminPhoneDigits}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-start gap-3 rounded-2xl border border-green-100 bg-[#F0FDF4] p-5 transition hover:shadow-md"
@@ -279,12 +285,12 @@ export default function HomePage() {
               <div>
                 <p className="font-semibold text-[#0B2545]">WhatsApp</p>
                 <p className="text-sm text-slate-600">
-                  0531448824 — Fastest response
+                  {adminPhone} — Fastest response
                 </p>
               </div>
             </a>
             <a
-              href="mailto:buywater.tamale@gmail.com"
+              href={`mailto:${settings?.adminEmail || "buywater.tamale@gmail.com"}`}
               className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-[#EFF6FF] p-5 transition hover:shadow-md"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0077C8] text-white">
@@ -293,7 +299,7 @@ export default function HomePage() {
               <div>
                 <p className="font-semibold text-[#0B2545]">Email</p>
                 <p className="text-sm text-slate-600">
-                  We&apos;ll reply within 24 hours
+                  We'll reply within 24 hours
                 </p>
               </div>
             </a>
@@ -303,9 +309,7 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="font-semibold text-[#0B2545]">Hours</p>
-                <p className="text-sm text-slate-600">
-                  7 AM - 8:30 PM, Including weekends
-                </p>
+                <p className="text-sm text-slate-600">{hours}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-[#FFFBEB] p-5">
@@ -324,7 +328,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== CTA ========== */}
       <section className="bg-gradient-to-b from-[#F0F7FC] to-white py-16 text-center">
         <img
           src="/logo.jpg"
@@ -338,15 +341,12 @@ export default function HomePage() {
           Order in seconds. Delivered in minutes. Serving all UDS hostels and
           environs in Tamale.
         </p>
-        <Link
-          href={user ? "/order" : "/register"}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#0077C8] px-8 py-3.5 text-sm font-semibold text-white shadow-lg hover:bg-[#0066AD]"
-        >
-          Place Your Order <ArrowRight className="h-4 w-4" />
+        <Link href={orderHref} className={orderCtaClassBottom}>
+          <Droplets className="h-4 w-4" />
+          Order Now — Ghc{price}/gallon
         </Link>
       </section>
 
-      {/* ========== FOOTER ========== */}
       <footer className="bg-[#0B2545] py-10 text-center text-white">
         <div className="mx-auto flex max-w-lg flex-col items-center gap-2 px-4">
           <div className="mb-1 flex items-center gap-2">
@@ -358,27 +358,16 @@ export default function HomePage() {
             <span className="font-semibold">BuyWater</span>
           </div>
           <p className="text-sm text-white/70">
-            Tamale UDS and environs · Tamale, Northern Region, Ghana
+            {serviceArea} · Tamale, Northern Region, Ghana
           </p>
           <p className="text-sm text-white/70">
-            Call: 0531448824 / 0502748671
+            Call: {adminPhone} / {momoNumber}
           </p>
           <p className="mt-3 text-xs text-white/40">
             © {new Date().getFullYear()} BuyWater. Fresh Water Delivered.
           </p>
         </div>
       </footer>
-
-      {/* Floating WhatsApp */}
-      <a
-        href="https://wa.me/233531448824"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600"
-        aria-label="WhatsApp"
-      >
-        <MessageCircle className="h-7 w-7" />
-      </a>
     </div>
   );
 }
