@@ -117,7 +117,10 @@ export default function OrderQueuePage() {
       )}
 
       <main className="mx-auto max-w-lg px-4 py-6">
-        <Link href="/admin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#0077C8]">
+        <Link
+          href="/admin"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#0077C8]"
+        >
           <ArrowLeft className="h-4 w-4" /> Admin Office
         </Link>
 
@@ -155,7 +158,10 @@ export default function OrderQueuePage() {
         ) : (
           <div className="space-y-3">
             {orders.map((o, i) => (
-              <div key={o.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <div
+                key={o.id}
+                className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+              >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <div>
                     <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0077C8] text-xs font-bold text-white">
