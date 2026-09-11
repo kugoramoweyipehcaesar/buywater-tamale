@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-const MAX_BYTES = 400_000;
+const MAX_BYTES = 400_000; // ~400KB base64 limit
 
 export async function POST(request) {
   try {
@@ -19,6 +19,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "No photo provided" }, { status: 400 });
     }
 
+    // Accept data URL only
     if (!photo.startsWith("data:image/")) {
       return NextResponse.json(
         { error: "Invalid image. Use JPEG or PNG." },
@@ -33,6 +34,7 @@ export async function POST(request) {
       );
     }
 
+    // Basic type check
     if (
       !photo.startsWith("data:image/jpeg") &&
       !photo.startsWith("data:image/png") &&
