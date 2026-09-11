@@ -11,6 +11,9 @@ import {
   CheckCircle,
   Clock,
   ArrowLeft,
+  Copy,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 
 export default function InviteAdminPage() {
@@ -21,22 +24,32 @@ export default function InviteAdminPage() {
   const [role, setRole] = useState("ADMIN");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
+  const [error, setError] = useState("");
   const [invites, setInvites] = useState([]);
+  const [lastInviteUrl, setLastInviteUrl] = useState("");
+  const [emailSent, setEmailSent] = useState(null);
 
   function showToast(msg) {
     setToast(msg);
-    setTimeout(() => setToast(""), 3500);
+    setTimeout(() => setToast(""), 4000);
   }
 
   const load = useCallback(async () => {
     try {
-      const me = await fetch("/api/auth/me").then((r) => r.json());
+      const me = await fetch("/api/auth/me", { credentials: "include" }).then(
+        (r) => r.json()
+      );
       if (!me.user || me.user.role !== "ADMIN") {
         router.push("/admin-login");
         return;
       }
       setUser(me.user);
-      const res = await fetch("/api/admin/invite").then((r) => r.json());
+      const res = await fetch("/api/admin/invite", {
+        credentials: "include",
+      }).then((r) => r.json());
+      if (res.error && !res.invites) {
+        console.warn("invite list:", res.error);
+      }
       setInvites(res.invites || []);
     } catch {
       router.push("/admin-login");
@@ -51,23 +64,59 @@ export default function InviteAdminPage() {
 
   async function sendInvite(e) {
     e.preventDefault();
-    if (!email.trim()) return;
+    setError("");
+    setLastInviteUrl("");
+    setEmailSent(null);
+    const clean = email.trim();
+    if (!clean) {
+      setError("Enter an email address");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/admin/invite", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), role }),
+        body: JSON.stringify({ email: clean, role }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      showToast("Invite sent — Live now");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+
+      setEmailSent(!!data.emailSent);
+      if (data.inviteUrl) setLastInviteUrl(data.inviteUrl);
+
+      if (data.emailSent) {
+        showToast(`Email sent to ${clean}`);
+        setError("");
+      } else {
+        showToast("Invite created — share the link below");
+        setError(
+          data.message ||
+            data.emailError ||
+            "Email could not be sent. Copy the invite link and send it manually."
+        );
+      }
       setEmail("");
       await load();
     } catch (err) {
-      showToast(err.message);
+      console.error("sendInvite", err);
+      setError(err.message || "Failed to send invite");
+      showToast(err.message || "Failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyLink() {
+    if (!lastInviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(lastInviteUrl);
+      showToast("Link copied");
+    } catch {
+      showToast("Could not copy — select the link manually");
     }
   }
 
@@ -112,7 +161,7 @@ export default function InviteAdminPage() {
 
         <form
           onSubmit={sendInvite}
-          className="mb-6 space-y-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+          className="mb-4 space-y-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-zinc-400">
@@ -123,10 +172,11 @@ export default function InviteAdminPage() {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="colleague@example.com"
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#0077C8] dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </div>
           </div>
@@ -143,19 +193,69 @@ export default function InviteAdminPage() {
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>
           </div>
+
+          {error && (
+            <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {emailSent === true && (
+            <div className="flex gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Invite email sent successfully.</span>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={busy}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white disabled:opacity-60 dark:bg-sky-500"
           >
             {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending…
+              </>
             ) : (
-              <UserPlus className="h-4 w-4" />
+              <>
+                <UserPlus className="h-4 w-4" />
+                Send Invite
+              </>
             )}
-            Send Invite
           </button>
         </form>
+
+        {lastInviteUrl && (
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-zinc-300">
+              Invite link (valid 24h) — copy & share if email did not arrive
+            </p>
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={lastInviteUrl}
+                className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              />
+              <button
+                type="button"
+                onClick={copyLink}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#0B2545] px-3 py-2 text-xs font-semibold text-white"
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </button>
+              <a
+                href={lastInviteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Open
+              </a>
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-3 text-sm font-bold text-[#0B2545] dark:text-zinc-100">
           Recent invites
