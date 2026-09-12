@@ -11,12 +11,9 @@ export default function WhatsAppFloat() {
   const [pos, setPos] = useState({ x: null, y: null });
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ active: false, ox: 0, oy: 0, moved: false });
-  const btnRef = useRef(null);
 
-  // Hide on all admin routes
   const hide =
-    path?.startsWith("/admin") ||
-    path?.startsWith("/admin-login");
+    path?.startsWith("/admin") || path?.startsWith("/admin-login");
 
   useEffect(() => {
     try {
@@ -29,7 +26,6 @@ export default function WhatsAppFloat() {
         }
       }
     } catch (_) {}
-    // default bottom-right
     setPos({
       x: typeof window !== "undefined" ? window.innerWidth - 80 : 20,
       y: typeof window !== "undefined" ? window.innerHeight - 80 : 20,
@@ -39,17 +35,12 @@ export default function WhatsAppFloat() {
   useEffect(() => {
     function onMove(e) {
       if (!dragRef.current.active) return;
+      if (e.cancelable) e.preventDefault();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       const size = 56;
-      const x = Math.min(
-        Math.max(8, clientX - dragRef.current.ox),
-        window.innerWidth - size - 8
-      );
-      const y = Math.min(
-        Math.max(8, clientY - dragRef.current.oy),
-        window.innerHeight - size - 8
-      );
+      const x = Math.min(Math.max(8, clientX - dragRef.current.ox), window.innerWidth - size - 8);
+      const y = Math.min(Math.max(8, clientY - dragRef.current.oy), window.innerHeight - size - 8);
       dragRef.current.moved = true;
       setPos({ x, y });
     }
@@ -93,15 +84,11 @@ export default function WhatsAppFloat() {
   }
 
   function onClick(e) {
-    // If user dragged, don't open the link
-    if (dragRef.current.moved) {
-      e.preventDefault();
-    }
+    if (dragRef.current.moved) e.preventDefault();
   }
 
   return (
     <a
-      ref={btnRef}
       href={GROUP_URL}
       target="_blank"
       rel="noopener noreferrer"
@@ -119,19 +106,13 @@ export default function WhatsAppFloat() {
         touchAction: "none",
         userSelect: "none",
       }}
-      className="block h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
+      className="block h-14 w-14 overflow-hidden rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
     >
-      {/* Custom WhatsApp icon (provided image) */}
       <img
-        src="/whatsapp-icon.jpg"
+        src="/whatsapp-icon.svg"
         alt="WhatsApp"
         draggable={false}
-        className="h-14 w-14 rounded-full object-cover pointer-events-none"
-        onError={(e) => {
-          // Fallback green circle if image missing
-          e.currentTarget.style.display = "none";
-          e.currentTarget.parentElement.classList.add("bg-[#25D366]");
-        }}
+        className="pointer-events-none h-14 w-14 rounded-full object-cover"
       />
     </a>
   );
