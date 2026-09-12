@@ -105,14 +105,16 @@ export default function WhatsAppFloat() {
         cursor: dragging ? "grabbing" : "grab",
         touchAction: "none",
         userSelect: "none",
+        animationPlayState: dragging ? "paused" : "running",
       }}
-      className="block h-14 w-14 overflow-hidden rounded-full shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
+      className="wa-float-btn block h-14 w-14 overflow-hidden rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
     >
+      <span className="wa-float-ring" aria-hidden="true" />
       <img
         src="/whatsapp-icon.svg"
         alt="WhatsApp"
         draggable={false}
-        className="pointer-events-none h-14 w-14 rounded-full object-cover"
+        className="pointer-events-none relative z-[1] h-14 w-14 rounded-full object-cover"
       />
     </a>
   );
