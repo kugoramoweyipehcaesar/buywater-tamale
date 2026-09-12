@@ -64,9 +64,11 @@ export default function AdminLayout({ children }) {
     <div className="flex min-h-screen bg-[#f1f5f9]">
       <aside className="flex w-[250px] shrink-0 flex-col bg-[#1e293b] text-white">
         <div className="flex items-center gap-3 px-4 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/20 ring-2 ring-sky-400/40">
-            <span className="text-lg">💧</span>
-          </div>
+          <img
+            src="/logo.jpg"
+            alt="BuyWater — Fresh Water Delivered"
+            className="h-11 w-11 rounded-full object-cover ring-2 ring-sky-400/50 shadow"
+          />
           <div className="min-w-0">
             <p className="text-base font-bold leading-tight tracking-tight">BuyWater</p>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
