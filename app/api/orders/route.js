@@ -51,6 +51,54 @@ export async function POST(request) {
     const user = await getCurrentUser();
     const body = await request.json();
 
+    // Site-wide settings enforcement
+    const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+    if (settings?.maintenanceMode) {
+      return NextResponse.json(
+        {
+          error:
+            settings.maintenanceMessage ||
+            "Site is under maintenance. Ordering is temporarily unavailable.",
+        },
+        { status: 503 }
+      );
+    }
+    if (settings && settings.serviceActive === false) {
+      return NextResponse.json(
+        { error: "Ordering is currently disabled." },
+        { status: 503 }
+      );
+    }
+
+    const method = String(body.paymentMethod || "cash_on_delivery").toLowerCase();
+    const isMomo = method === "momo" || method.includes("momo");
+    const isCash =
+      method === "cash_on_delivery" || method === "cash" || method.includes("cash");
+
+    if (settings) {
+      if (isCash && settings.cashEnabled === false) {
+        return NextResponse.json(
+          { error: "Cash on delivery is not available. Choose another payment method." },
+          { status: 400 }
+        );
+      }
+      if (isMomo && settings.momoEnabled === false) {
+        return NextResponse.json(
+          { error: "Mobile Money is not available. Choose another payment method." },
+          { status: 400 }
+        );
+      }
+      if (!isCash && !isMomo) {
+        // unknown method — still allow if both enabled, else reject
+        if (settings.cashEnabled === false && settings.momoEnabled === false) {
+          return NextResponse.json(
+            { error: "No payment methods are enabled." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         orderNumber: body.orderNumber || genOrderNumber(),
@@ -89,7 +137,6 @@ export async function POST(request) {
       ip,
     });
 
-    // Instant email to super admin
     notifyAdminOrderPlaced(order).catch((err) =>
       console.error("order notify failed", err)
     );
