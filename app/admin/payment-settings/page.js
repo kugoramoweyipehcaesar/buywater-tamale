@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
 import {
   CreditCard,
   Banknote,
@@ -76,35 +75,58 @@ export default function PaymentSettingsPage() {
     load();
   }, [load]);
 
+  async function savePayload(nextForm) {
+    const contentJson = JSON.stringify({
+      momoNumber3: nextForm.momoNumber3,
+      momoName3: nextForm.momoName3,
+      otherMethods: nextForm.otherMethods,
+      secondaryPhone: nextForm.secondaryPhone,
+      paymentMethods: {
+        cash: nextForm.cashEnabled,
+        momo: nextForm.momoEnabled,
+      },
+    });
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cashEnabled: nextForm.cashEnabled,
+        momoEnabled: nextForm.momoEnabled,
+        momoNumber: nextForm.momoNumber,
+        momoName: nextForm.momoName,
+        momoNumber2: nextForm.momoNumber2,
+        momoName2: nextForm.momoName2,
+        adminPhone: nextForm.primaryPhone,
+        contentJson,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Save failed");
+    return data;
+  }
+
+  async function toggleMode(key) {
+    const next = { ...form, [key]: !form[key] };
+    setForm(next);
+    setBusy(true);
+    try {
+      await savePayload(next);
+      showToast(
+        `${key === "cashEnabled" ? "Cash" : "Mobile Money"} ${next[key] ? "enabled" : "disabled"} site-wide`
+      );
+      router.refresh();
+    } catch (e) {
+      setForm(form);
+      showToast(e.message || "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     setBusy(true);
     try {
-      const contentJson = JSON.stringify({
-        momoNumber3: form.momoNumber3,
-        momoName3: form.momoName3,
-        otherMethods: form.otherMethods,
-        secondaryPhone: form.secondaryPhone,
-        paymentMethods: {
-          cash: form.cashEnabled,
-          momo: form.momoEnabled,
-        },
-      });
-      const res = await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cashEnabled: form.cashEnabled,
-          momoEnabled: form.momoEnabled,
-          momoNumber: form.momoNumber,
-          momoName: form.momoName,
-          momoNumber2: form.momoNumber2,
-          momoName2: form.momoName2,
-          adminPhone: form.primaryPhone,
-          contentJson,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
+      await savePayload(form);
       showToast("Payment settings saved — Live now");
       router.refresh();
     } catch (e) {
@@ -116,68 +138,58 @@ export default function PaymentSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500 dark:text-zinc-400">
+      <div className="flex min-h-screen items-center justify-center text-slate-500">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#EEF6FC] pb-16 transition-colors duration-300 dark:bg-zinc-950">
-      <SiteHeader user={user} />
+    <div className="min-h-screen bg-[#f1f5f9] pb-16">
       {toast && (
-        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-[#0B2545] px-4 py-2 text-sm font-semibold text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-[#0B2545] px-4 py-2 text-sm font-semibold text-white shadow-lg">
           {toast}
         </div>
       )}
 
       <main className="mx-auto max-w-2xl px-4 py-6">
-        <Link
-          href="/admin"
-          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#0077C8] dark:text-sky-400"
-        >
+        <Link href="/admin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#0077C8]">
           <ArrowLeft className="h-4 w-4" /> Admin Office
         </Link>
 
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0077C8] text-white">
-            <CreditCard className="h-5 w-5" />
-          </div>
+          <img src="/logo.jpg" alt="BuyWater" className="h-11 w-11 rounded-full object-cover ring-2 ring-sky-200" />
           <div>
-            <h1 className="text-xl font-bold text-[#0B2545] dark:text-zinc-50">
-              Payment Settings
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-zinc-400">
-              Manage MoMo details and payment modes
+            <h1 className="text-xl font-bold text-black">Payment Settings</h1>
+            <p className="text-sm text-slate-500">
+              Toggles apply live to the customer order form site-wide
             </p>
           </div>
         </div>
 
-        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-3 text-sm font-bold text-[#0B2545] dark:text-zinc-100">
-            Payment Modes
-          </h2>
+        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-bold text-black">Payment Modes</h2>
           <ModeRow
             icon={Banknote}
             title="Cash on Delivery"
-            desc="Accept cash payments"
+            desc="Show cash option on order page"
             on={form.cashEnabled}
-            onToggle={() => setForm((f) => ({ ...f, cashEnabled: !f.cashEnabled }))}
+            disabled={busy}
+            onToggle={() => toggleMode("cashEnabled")}
           />
-          <div className="my-2 border-t border-slate-100 dark:border-zinc-800" />
+          <div className="my-2 border-t border-slate-100" />
           <ModeRow
             icon={Smartphone}
             title="Mobile Money"
-            desc="Accept MoMo payments"
+            desc="Show MoMo option on order page"
             on={form.momoEnabled}
-            onToggle={() => setForm((f) => ({ ...f, momoEnabled: !f.momoEnabled }))}
+            disabled={busy}
+            onToggle={() => toggleMode("momoEnabled")}
           />
         </section>
 
-        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-3 text-sm font-bold text-[#0B2545] dark:text-zinc-100">
-            MoMo Merchant Details
-          </h2>
+        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-bold text-black">MoMo Merchant Details</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="MoMo Number" value={form.momoNumber} onChange={(v) => setForm((f) => ({ ...f, momoNumber: v }))} placeholder="0502748671" />
             <Field label="MoMo Account Name" value={form.momoName} onChange={(v) => setForm((f) => ({ ...f, momoName: v }))} placeholder="Account holder name" />
@@ -188,26 +200,20 @@ export default function PaymentSettingsPage() {
           </div>
         </section>
 
-        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-1 text-sm font-bold text-[#0B2545] dark:text-zinc-100">
-            Other Payment Methods
-          </h2>
-          <p className="mb-2 text-xs text-slate-500 dark:text-zinc-400">
-            Additional Methods (e.g. Bank Transfer, PayPal)
-          </p>
+        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-bold text-black">Other Payment Methods</h2>
+          <p className="mb-2 text-xs text-slate-500">Additional Methods (e.g. Bank Transfer)</p>
           <textarea
             value={form.otherMethods}
             onChange={(e) => setForm((f) => ({ ...f, otherMethods: e.target.value }))}
             rows={3}
-            placeholder="Enter details for any additional payment methods you accept..."
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            placeholder="Enter details for any additional payment methods..."
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-black"
           />
         </section>
 
-        <section className="mb-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-3 text-sm font-bold text-[#0B2545] dark:text-zinc-100">
-            Contact Phone Numbers
-          </h2>
+        <section className="mb-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-bold text-black">Contact Phone Numbers</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Primary Phone" value={form.primaryPhone} onChange={(v) => setForm((f) => ({ ...f, primaryPhone: v }))} />
             <Field label="Secondary Phone" value={form.secondaryPhone} onChange={(v) => setForm((f) => ({ ...f, secondaryPhone: v }))} />
@@ -218,7 +224,7 @@ export default function PaymentSettingsPage() {
           type="button"
           disabled={busy}
           onClick={save}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white disabled:opacity-60 dark:bg-sky-500"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save Payment Settings
@@ -228,29 +234,24 @@ export default function PaymentSettingsPage() {
   );
 }
 
-function ModeRow({ icon: Icon, title, desc, on, onToggle }) {
+function ModeRow({ icon: Icon, title, desc, on, onToggle, disabled }) {
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-800">
-        <Icon className="h-5 w-5 text-slate-600 dark:text-zinc-300" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+        <Icon className="h-5 w-5 text-slate-600" />
       </div>
       <div className="flex-1">
-        <p className="text-sm font-semibold text-[#0B2545] dark:text-zinc-100">{title}</p>
-        <p className="text-xs text-slate-500 dark:text-zinc-400">{desc}</p>
+        <p className="text-sm font-semibold text-black">{title}</p>
+        <p className="text-xs text-slate-500">{desc}</p>
       </div>
       <button
         type="button"
+        disabled={disabled}
         onClick={onToggle}
-        className={`relative h-7 w-12 rounded-full transition-colors ${
-          on ? "bg-[#0077C8] dark:bg-sky-500" : "bg-slate-200 dark:bg-zinc-700"
-        }`}
+        className={`relative h-7 w-12 rounded-full transition-colors ${on ? "bg-[#0077C8]" : "bg-slate-200"}`}
         aria-pressed={on}
       >
-        <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-            on ? "left-5" : "left-0.5"
-          }`}
-        />
+        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${on ? "left-5" : "left-0.5"}`} />
       </button>
     </div>
   );
@@ -259,14 +260,12 @@ function ModeRow({ icon: Icon, title, desc, on, onToggle }) {
 function Field({ label, value, onChange, placeholder }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-zinc-400">
-        {label}
-      </label>
+      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
       <input
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-black"
       />
     </div>
   );
