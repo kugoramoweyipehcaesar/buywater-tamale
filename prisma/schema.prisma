@@ -24,6 +24,7 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      Order[]
+  promoRedemptions PromoRedemption[]
 }
 
 model Product {
@@ -102,7 +103,6 @@ model AppSettings {
   gallonSize           Int      @default(20)
 }
 
-
 model PromotionCode {
   id          String   @id @default(cuid())
   code        String   @unique
@@ -112,6 +112,23 @@ model PromotionCode {
   maxUses     Int      @default(100)
   description String?
   createdAt   DateTime @default(now())
+  redemptions PromoRedemption[]
+}
+
+/// One successful claim of a promo by a single user (enforces 1 use per user)
+model PromoRedemption {
+  id        String   @id @default(cuid())
+  promoId   String
+  userId    String
+  orderId   String?
+  code      String
+  createdAt DateTime @default(now())
+  promo     PromotionCode @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([promoId, userId])
+  @@index([userId])
+  @@index([code])
 }
 
 model Feedback {
@@ -140,7 +157,6 @@ model Announcement {
   createdAt DateTime @default(now())
 }
 
-
 model PasswordResetToken {
   id        String   @id @default(cuid())
   email     String
@@ -149,7 +165,6 @@ model PasswordResetToken {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
-
 
 model AdminInvite {
   id        String   @id @default(cuid())
