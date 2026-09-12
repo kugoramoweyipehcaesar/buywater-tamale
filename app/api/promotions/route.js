@@ -66,3 +66,19 @@ export async function PATCH(request) {
     return NextResponse.json({ error: e.message || "Server error" }, { status });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    await requireAdmin();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 });
+    }
+    await prisma.promotionCode.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    const status = e.status || 500;
+    return NextResponse.json({ error: e.message || "Server error" }, { status });
+  }
+}
