@@ -12,6 +12,7 @@ import {
   Smartphone,
   BadgePercent,
   ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function OrderPage() {
@@ -40,11 +41,10 @@ export default function OrderPage() {
   const subGallons = settings?.subscriptionGallons ?? 10;
   const cashEnabled = settings?.cashEnabled !== false;
   const momoEnabled = settings?.momoEnabled !== false;
+  const maintenanceOn = !!settings?.maintenanceMode;
   const freeGallons = promoApplied?.rewardValue || 0;
   const billableGallons = isSubscription ? subGallons : gallons;
-  const total = isSubscription
-    ? subPrice
-    : billableGallons * pricePerGallon;
+  const total = isSubscription ? subPrice : billableGallons * pricePerGallon;
   const totalGallons = billableGallons + freeGallons;
 
   useEffect(() => {
@@ -59,6 +59,12 @@ export default function OrderPage() {
         setHostels((hos.hostels || []).filter((h) => h.active !== false));
         if (me.user?.hostel) setHostel(me.user.hostel);
         if (me.user?.customHostel) setCustomHostel(me.user.customHostel);
+        const s = set.settings || {};
+        if (s.cashEnabled === false && s.momoEnabled !== false) {
+          setPaymentMethod("momo");
+        } else if (s.momoEnabled === false && s.cashEnabled !== false) {
+          setPaymentMethod("cash_on_delivery");
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -91,6 +97,10 @@ export default function OrderPage() {
     e.preventDefault();
     setOrderError("");
     setOrderSuccess("");
+    if (maintenanceOn) {
+      setOrderError("Site is under maintenance. Ordering is unavailable.");
+      return;
+    }
     if (!user) {
       router.push("/login");
       return;
@@ -101,6 +111,14 @@ export default function OrderPage() {
     }
     if (hostel === "Other" && !customHostel.trim()) {
       setOrderError("Enter your hostel name");
+      return;
+    }
+    if (paymentMethod === "momo" && !momoEnabled) {
+      setOrderError("Mobile Money is not available");
+      return;
+    }
+    if (paymentMethod === "cash_on_delivery" && !cashEnabled) {
+      setOrderError("Cash on delivery is not available");
       return;
     }
     if (paymentMethod === "momo" && !momoNumber.trim()) {
@@ -180,10 +198,29 @@ export default function OrderPage() {
         <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#0077C8]">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
-        <h1 className="mb-1 text-xl font-bold text-[#0B2545]">Order Water</h1>
-        <p className="mb-5 text-sm text-slate-500">
-          Ghc{pricePerGallon} per gallon · Delivery from settings
-        </p>
+
+        <div className="mb-4 flex items-center gap-3">
+          <img src="/logo.jpg" alt="BuyWater" className="h-12 w-12 rounded-full object-cover ring-2 ring-sky-200" />
+          <div>
+            <h1 className="text-xl font-bold text-black">Order Water</h1>
+            <p className="text-sm text-slate-500">
+              Ghc{pricePerGallon} per gallon · Fresh Water Delivered
+            </p>
+          </div>
+        </div>
+
+        {maintenanceOn && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Maintenance mode is on</p>
+              <p className="text-xs">
+                {settings?.maintenanceMessage ||
+                  "Ordering is temporarily unavailable."}
+              </p>
+            </div>
+          </div>
+        )}
 
         {!user && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -203,37 +240,37 @@ export default function OrderPage() {
             <img src="/product.jpg" alt="20L BuyWater" className="h-36 w-auto rounded-xl object-contain" />
           </div>
 
-          <p className="mb-3 text-sm font-semibold text-[#0B2545]">Number of Gallons</p>
+          <p className="mb-3 text-sm font-semibold text-black">Number of Gallons</p>
           <div className="mb-5 flex items-center justify-center gap-6">
-            <button type="button" disabled={isSubscription} onClick={() => setGallons((g) => Math.max(1, g - 1))} className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#0077C8]/25 text-[#0077C8] disabled:opacity-40">
+            <button type="button" disabled={isSubscription || maintenanceOn} onClick={() => setGallons((g) => Math.max(1, g - 1))} className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#0077C8]/25 text-[#0077C8] disabled:opacity-40">
               <Minus className="h-5 w-5" />
             </button>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5">
                 <Droplets className="h-6 w-6 text-[#0077C8]" />
-                <span className="text-3xl font-bold text-[#0B2545]">{isSubscription ? subGallons : gallons}</span>
+                <span className="text-3xl font-bold text-black">{isSubscription ? subGallons : gallons}</span>
               </div>
               <p className="text-xs text-slate-500">Ghc{pricePerGallon.toFixed(2)} each</p>
             </div>
-            <button type="button" disabled={isSubscription} onClick={() => setGallons((g) => g + 1)} className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#0077C8]/25 text-[#0077C8] disabled:opacity-40">
+            <button type="button" disabled={isSubscription || maintenanceOn} onClick={() => setGallons((g) => g + 1)} className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#0077C8]/25 text-[#0077C8] disabled:opacity-40">
               <Plus className="h-5 w-5" />
             </button>
           </div>
 
-          <button type="button" onClick={() => setIsSubscription(!isSubscription)} className={`mb-5 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left ${
+          <button type="button" disabled={maintenanceOn} onClick={() => setIsSubscription(!isSubscription)} className={`mb-5 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left ${
             isSubscription ? "border-[#0077C8] bg-[#0077C8]/5" : "border-slate-200 bg-slate-50"
           }`}>
             <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isSubscription ? "bg-[#0077C8] text-white" : "bg-slate-200"}`}>
               <BadgePercent className="h-4 w-4" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-[#0B2545]">Subscribe & Save</p>
+              <p className="text-sm font-semibold text-black">Subscribe & Save</p>
               <p className="text-xs text-slate-500">{subGallons} gallons for Ghc{subPrice}</p>
             </div>
           </button>
 
-          <label className="mb-1.5 block text-sm font-semibold text-[#0B2545]">Select Your Hostel</label>
-          <select required value={hostel} onChange={(e) => setHostel(e.target.value)} className="mb-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+          <label className="mb-1.5 block text-sm font-semibold text-black">Select Your Hostel</label>
+          <select required value={hostel} onChange={(e) => setHostel(e.target.value)} disabled={maintenanceOn} className="mb-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black">
             <option value="">Select hostel</option>
             {hostels.map((h) => (
               <option key={h.id} value={h.name}>{h.name}</option>
@@ -241,21 +278,24 @@ export default function OrderPage() {
             <option value="Other">Other (specify)</option>
           </select>
           {hostel === "Other" && (
-            <input required value={customHostel} onChange={(e) => setCustomHostel(e.target.value)} placeholder="Hostel name" className="mb-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            <input required value={customHostel} onChange={(e) => setCustomHostel(e.target.value)} placeholder="Hostel name" className="mb-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black" />
           )}
 
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Room Number</label>
-              <input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="e.g. 12" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="e.g. 12" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Block Number</label>
-              <input value={blockNumber} onChange={(e) => setBlockNumber(e.target.value)} placeholder="e.g. B" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <input value={blockNumber} onChange={(e) => setBlockNumber(e.target.value)} placeholder="e.g. B" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black" />
             </div>
           </div>
 
-          <p className="mb-2 text-sm font-semibold text-[#0B2545]">Payment Method</p>
+          <p className="mb-2 text-sm font-semibold text-black">Payment Method</p>
+          {!cashEnabled && !momoEnabled && (
+            <p className="mb-3 text-sm text-red-600">No payment methods are enabled. Contact admin.</p>
+          )}
           <div className="mb-4 grid grid-cols-2 gap-3">
             {cashEnabled && (
               <button type="button" onClick={() => setPaymentMethod("cash_on_delivery")} className={`flex flex-col items-center gap-1 rounded-xl border-2 py-3 text-sm font-medium ${
@@ -273,15 +313,15 @@ export default function OrderPage() {
             )}
           </div>
 
-          {paymentMethod === "momo" && (
+          {paymentMethod === "momo" && momoEnabled && (
             <div className="mb-4 space-y-2">
-              <input value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} placeholder="Your MoMo number" className="w-full rounded-xl border px-3 py-2.5 text-sm" />
-              <input value={momoReference} onChange={(e) => setMomoReference(e.target.value)} placeholder="Transaction reference (optional)" className="w-full rounded-xl border px-3 py-2.5 text-sm" />
+              <input value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} placeholder="Your MoMo number" className="w-full rounded-xl border px-3 py-2.5 text-sm text-black" />
+              <input value={momoReference} onChange={(e) => setMomoReference(e.target.value)} placeholder="Transaction reference (optional)" className="w-full rounded-xl border px-3 py-2.5 text-sm text-black" />
             </div>
           )}
 
           <div className="mb-4 flex gap-2">
-            <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="PROMO CODE" className="flex-1 rounded-xl border px-3 py-2.5 text-sm uppercase" />
+            <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="PROMO CODE" className="flex-1 rounded-xl border px-3 py-2.5 text-sm uppercase text-black" />
             <button type="button" onClick={applyPromo} className="rounded-xl border px-4 text-sm font-semibold text-[#0077C8]">Apply</button>
           </div>
           {promoApplied && (
@@ -289,12 +329,12 @@ export default function OrderPage() {
           )}
 
           <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3 text-sm">
-            <div className="flex justify-between"><span>Gallons</span><span>{totalGallons}</span></div>
-            <div className="mt-1 flex justify-between font-semibold text-[#0B2545]"><span>Total</span><span>Ghc{Number(total).toFixed(2)}</span></div>
+            <div className="flex justify-between text-black"><span>Gallons</span><span>{totalGallons}</span></div>
+            <div className="mt-1 flex justify-between font-semibold text-black"><span>Total</span><span>Ghc{Number(total).toFixed(2)}</span></div>
           </div>
 
-          <button type="submit" disabled={orderLoading || !user} className="w-full rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white shadow hover:bg-[#0066AD] disabled:opacity-60">
-            {orderLoading ? "Placing…" : `Place order — Ghc${Number(total).toFixed(2)}`}
+          <button type="submit" disabled={orderLoading || !user || maintenanceOn || (!cashEnabled && !momoEnabled)} className="w-full rounded-xl bg-[#0077C8] py-3 text-sm font-semibold text-white shadow hover:bg-[#0066AD] disabled:opacity-60">
+            {orderLoading ? "Placing…" : maintenanceOn ? "Ordering unavailable" : `Place order — Ghc${Number(total).toFixed(2)}`}
           </button>
         </form>
       </div>
