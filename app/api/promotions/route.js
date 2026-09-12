@@ -5,7 +5,6 @@ import { requireAdmin, getCurrentUser } from "@/lib/auth";
 async function userAlreadyRedeemed(promoId, code, user) {
   if (!user?.id) return false;
 
-  // Preferred: PromoRedemption table
   try {
     const row = await prisma.promoRedemption.findUnique({
       where: {
@@ -13,19 +12,22 @@ async function userAlreadyRedeemed(promoId, code, user) {
       },
     });
     if (row) return true;
-  } catch (_
-  ) {
-    // Table may not exist until migrate — fall through
+  } catch (_) {
+    // Table may not exist until migrate
   }
 
-  // Fallback: any past order by this user mentioning this promo code
   try {
     const prior = await prisma.order.findFirst({
       where: {
-        OR: [{ userId: user.id }, { email: user.email || undefined }].filter(
-          (x) => Object.values(x).some(Boolean)
-        ),
-        notes: { contains: `Promo: ${code}` },
+        AND: [
+          {
+            OR: [
+              { userId: user.id },
+              ...(user.email ? [{ email: user.email }] : []),
+            ],
+          },
+          { notes: { contains: `Promo: ${code}` } },
+        ],
       },
       select: { id: true },
     });
@@ -106,7 +108,6 @@ export async function PATCH(request) {
   try {
     const body = await request.json();
 
-    // Redeem path (logged-in user claiming after successful order)
     if (body.redeem && body.id) {
       const user = await getCurrentUser();
       if (!user) {
@@ -138,14 +139,12 @@ export async function PATCH(request) {
           },
         });
       } catch (e) {
-        // Unique violation = already redeemed
         if (String(e.code) === "P2002") {
           return NextResponse.json(
             { error: "You have already used this promo code" },
             { status: 400 }
           );
         }
-        // Table missing — still bump timesUsed
         console.warn("promoRedemption create", e.message);
       }
 
