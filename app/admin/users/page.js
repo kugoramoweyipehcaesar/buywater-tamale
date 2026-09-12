@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
+
+const SUPER = "kugoramoweyipehcaesar49@gmail.com";
 
 export default function UserDirectoryPage() {
   const router = useRouter();
@@ -108,6 +111,50 @@ export default function UserDirectoryPage() {
     }
   }
 
+  async function promoteUser(u) {
+    if (!u) return;
+    const nextRole = u.role === "ADMIN" ? "USER" : "ADMIN";
+    if (u.email === SUPER && nextRole !== "ADMIN") {
+      showToast("Cannot demote super admin");
+      return;
+    }
+    if (
+      nextRole === "ADMIN" &&
+      !confirm(`Promote ${u.email} to Admin?`)
+    ) {
+      return;
+    }
+    if (
+      nextRole === "USER" &&
+      !confirm(`Demote ${u.email} to regular user?`)
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/users/promote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: u.id, role: nextRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      showToast(
+        nextRole === "ADMIN"
+          ? `${u.email} is now an Admin`
+          : `${u.email} demoted to user`
+      );
+      setSelected((prev) =>
+        prev && prev.id === u.id ? { ...prev, role: nextRole } : prev
+      );
+      await load();
+    } catch (err) {
+      showToast(err.message || "Error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-slate-500 dark:text-zinc-400">
@@ -126,14 +173,13 @@ export default function UserDirectoryPage() {
       )}
 
       <main className="mx-auto max-w-5xl px-4 py-6">
-        {/* Header */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0077C8] text-white">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#0B2545] dark:text-zinc-50">
+              <h1 className="text-xl font-bold text-black dark:text-zinc-50">
                 User Directory
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400">
@@ -149,7 +195,6 @@ export default function UserDirectoryPage() {
           </Link>
         </div>
 
-        {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Total Users" value={stats.totalUsers} />
           <StatCard label="Admins" value={stats.admins} />
@@ -157,7 +202,6 @@ export default function UserDirectoryPage() {
           <StatCard label="New (7 days)" value={stats.newUsers7d} />
         </div>
 
-        {/* Filters */}
         <div className="mb-4 flex flex-wrap gap-2">
           <div className="relative min-w-[180px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -190,7 +234,6 @@ export default function UserDirectoryPage() {
           ))}
         </div>
 
-        {/* Table / list */}
         <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           {users.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -200,13 +243,10 @@ export default function UserDirectoryPage() {
               <p className="text-sm font-medium text-slate-600 dark:text-zinc-300">
                 No users found
               </p>
-              <p className="mt-1 text-xs text-slate-400 dark:text-zinc-500">
-                Try a different search or filter
-              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-[800px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:border-zinc-800 dark:bg-zinc-950/50 dark:text-zinc-400">
                     <th className="px-4 py-3 font-semibold">User</th>
@@ -222,14 +262,13 @@ export default function UserDirectoryPage() {
                   {users.map((u) => (
                     <tr
                       key={u.id}
-                      onClick={() => setSelected(u)}
-                      className="cursor-pointer border-b border-slate-50 transition hover:bg-slate-50/80 dark:border-zinc-800/60 dark:hover:bg-zinc-800/40"
+                      className="border-b border-slate-50 transition hover:bg-slate-50/80 dark:border-zinc-800/60 dark:hover:bg-zinc-800/40"
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar name={u.name || u.email} photo={u.profilePhoto} />
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-[#0B2545] dark:text-zinc-100">
+                            <p className="truncate font-semibold text-black dark:text-zinc-100">
                               {u.name || u.username || "—"}
                             </p>
                             <p className="truncate text-xs text-slate-500 dark:text-zinc-400">
@@ -244,7 +283,7 @@ export default function UserDirectoryPage() {
                       <td className="px-4 py-3 text-slate-600 dark:text-zinc-300">
                         {formatDate(u.createdAt)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-[#0B2545] dark:text-zinc-100">
+                      <td className="px-4 py-3 font-medium text-black dark:text-zinc-100">
                         {u.orderCount ?? 0}
                       </td>
                       <td className="px-4 py-3">
@@ -254,16 +293,34 @@ export default function UserDirectoryPage() {
                         <StatusBadge banned={u.banned} />
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelected(u);
-                          }}
-                          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        >
-                          View
-                        </button>
+                        <div className="flex flex-wrap gap-1.5">
+                          {u.role !== "ADMIN" && u.email !== SUPER ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => promoteUser(u)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                            >
+                              <ShieldCheck className="h-3 w-3" /> Promote
+                            </button>
+                          ) : u.email !== SUPER ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => promoteUser(u)}
+                              className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300"
+                            >
+                              Demote
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setSelected(u)}
+                            className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300"
+                          >
+                            View
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -273,7 +330,6 @@ export default function UserDirectoryPage() {
           )}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-3">
             <button
@@ -299,7 +355,6 @@ export default function UserDirectoryPage() {
         )}
       </main>
 
-      {/* Drawer */}
       {selected && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div
@@ -308,7 +363,7 @@ export default function UserDirectoryPage() {
           />
           <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl dark:bg-zinc-900">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
-              <h2 className="text-lg font-bold text-[#0B2545] dark:text-zinc-50">
+              <h2 className="text-lg font-bold text-black dark:text-zinc-50">
                 User details
               </h2>
               <button
@@ -326,7 +381,7 @@ export default function UserDirectoryPage() {
                   photo={selected.profilePhoto}
                   size="lg"
                 />
-                <p className="mt-3 text-lg font-bold text-[#0B2545] dark:text-zinc-50">
+                <p className="mt-3 text-lg font-bold text-black dark:text-zinc-50">
                   {selected.name || selected.username || "—"}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-zinc-400">
@@ -346,7 +401,26 @@ export default function UserDirectoryPage() {
                 <Row label="User ID" value={selected.id} mono />
               </dl>
             </div>
-            <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
+            <div className="space-y-2 border-t border-slate-100 p-4 dark:border-zinc-800">
+              {selected.email !== SUPER && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => promoteUser(selected)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+                >
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-4 w-4" />
+                      {selected.role === "ADMIN"
+                        ? "Demote to user"
+                        : "Promote to Admin"}
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={busy}
@@ -383,9 +457,7 @@ function StatCard({ label, value }) {
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-bold text-[#0B2545] dark:text-zinc-50">
-        {value}
-      </p>
+      <p className="mt-1 text-2xl font-bold text-black dark:text-zinc-50">{value}</p>
     </div>
   );
 }
@@ -446,7 +518,7 @@ function Row({ label, value, mono }) {
     <div className="flex justify-between gap-4 border-b border-slate-50 py-2 dark:border-zinc-800">
       <dt className="text-slate-500 dark:text-zinc-400">{label}</dt>
       <dd
-        className={`text-right font-medium text-[#0B2545] dark:text-zinc-100 ${
+        className={`text-right font-medium text-black dark:text-zinc-100 ${
           mono ? "truncate font-mono text-xs" : ""
         }`}
       >
