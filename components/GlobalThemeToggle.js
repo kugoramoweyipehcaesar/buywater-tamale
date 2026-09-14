@@ -5,7 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Fixed theme control for pages without SiteHeader.
- * Hidden on /order (uses SiteHeader) and all /admin routes.
+ * Hidden on /order, /dashboard, and all /admin routes.
  */
 export default function GlobalThemeToggle() {
   const path = usePathname();
@@ -13,6 +13,8 @@ export default function GlobalThemeToggle() {
   const hide =
     path === "/order" ||
     path?.startsWith("/order/") ||
+    path === "/dashboard" ||
+    path?.startsWith("/dashboard/") ||
     path?.startsWith("/admin") ||
     path?.startsWith("/admin-login");
 
