@@ -14,6 +14,13 @@
   "dir": "ltr",
   "categories": ["shopping", "lifestyle", "business"],
   "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.buywater.tamale",
+      "url": "https://play.google.com/store/apps/details?id=com.buywater.tamale"
+    }
+  ],
   "launch_handler": {
     "client_mode": ["focus-existing", "auto"]
   },
@@ -133,14 +140,14 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "BuyWater Tamale – order water on your phone"
+      "label": "BuyWater Tamale order screen"
     },
     {
       "src": "https://buywater-tamale.onrender.com/icons/screenshot-wide.png",
       "sizes": "1920x1080",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "BuyWater Tamale – fresh water delivered"
+      "label": "BuyWater Tamale wide view"
     }
   ]
 }
