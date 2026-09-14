@@ -1,7 +1,6 @@
 import "./globals.css";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import ThemeProvider from "@/components/ThemeProvider";
-import GlobalThemeToggle from "@/components/GlobalThemeToggle";
 
 export const metadata = {
   title: "BuyWater – Fresh Water Delivered | Tamale",
@@ -14,7 +13,6 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen bg-[#EEF6FC] text-slate-900 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100">
         <ThemeProvider>
           {children}
-          <GlobalThemeToggle />
           <WhatsAppFloat />
         </ThemeProvider>
       </body>
