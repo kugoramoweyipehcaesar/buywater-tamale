@@ -9,6 +9,15 @@ function genOrderNumber() {
   return "BW-" + Math.floor(10000 + Math.random() * 90000);
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) =>
+      setTimeout(() => resolve({ ok: false, error: "email timeout" }), ms)
+    ),
+  ]);
+}
+
 /** List orders – admin sees all, user sees own */
 export async function GET(request) {
   try {
@@ -51,7 +60,6 @@ export async function POST(request) {
     const user = await getCurrentUser();
     const body = await request.json();
 
-    // Site-wide settings enforcement
     const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
     if (settings?.maintenanceMode) {
       return NextResponse.json(
@@ -89,7 +97,6 @@ export async function POST(request) {
         );
       }
       if (!isCash && !isMomo) {
-        // unknown method — still allow if both enabled, else reject
         if (settings.cashEnabled === false && settings.momoEnabled === false) {
           return NextResponse.json(
             { error: "No payment methods are enabled." },
@@ -137,11 +144,19 @@ export async function POST(request) {
       ip,
     });
 
-    notifyAdminOrderPlaced(order).catch((err) =>
-      console.error("order notify failed", err)
-    );
+    // Ensure admin email is attempted before response (max ~12s)
+    let emailResult = null;
+    try {
+      emailResult = await withTimeout(notifyAdminOrderPlaced(order), 12000);
+      console.log("[orders] admin notify:", emailResult);
+    } catch (err) {
+      console.error("[orders] admin notify error:", err?.message || err);
+    }
 
-    return NextResponse.json({ order }, { status: 201 });
+    return NextResponse.json(
+      { order, adminEmailSent: !!emailResult?.ok },
+      { status: 201 }
+    );
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: e.message || "Server error" }, { status: 500 });
