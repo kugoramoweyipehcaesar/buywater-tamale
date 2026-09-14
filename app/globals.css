@@ -10,6 +10,67 @@ body {
   @apply bg-[#EEF6FC] text-slate-900 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100;
 }
 
+/* Site-wide dark surfaces when html has class "dark" (next-themes) */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+/* Common light page shells used across BuyWater */
+html.dark .min-h-screen.bg-\[\#EEF6FC\],
+html.dark .min-h-screen.bg-\[\#F0F7FC\],
+html.dark .min-h-screen.bg-\[\#f1f5f9\],
+html.dark .bg-\[\#EEF6FC\],
+html.dark .bg-\[\#F0F7FC\],
+html.dark .bg-\[\#f1f5f9\] {
+  background-color: #09090b !important;
+}
+
+html.dark .bg-white,
+html.dark .bg-white\/95 {
+  background-color: #18181b !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/80 {
+  background-color: #27272a !important;
+}
+
+html.dark .text-black,
+html.dark .text-\[\#0B2545\],
+html.dark .text-slate-800,
+html.dark .text-slate-900 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html.dark .text-slate-700 {
+  color: #a1a1aa !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200 {
+  border-color: #3f3f46 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a !important;
+}
+
 /* Continuous floating WhatsApp button */
 @keyframes wa-float-bob {
   0%,
