@@ -18,9 +18,8 @@ export const metadata = {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      { url: "/logo.jpg", type: "image/jpeg" },
     ],
-    apple: [{ url: "/icons/icon-192.png" }],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -45,6 +44,8 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="BuyWater Tamale" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
       </head>
       <body className="min-h-screen bg-[#EEF6FC] text-slate-900 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100">
         <ThemeProvider>
