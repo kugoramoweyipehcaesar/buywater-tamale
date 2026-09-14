@@ -24,39 +24,33 @@
       "short_name": "Order",
       "description": "Order fresh water gallons",
       "url": "https://buywater-tamale.onrender.com/order?source=shortcut",
-      "icons": [
-        {
-          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
+      "icons": [{
+        "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }]
     },
     {
       "name": "My dashboard",
       "short_name": "Dashboard",
       "description": "Track your water orders",
       "url": "https://buywater-tamale.onrender.com/dashboard?source=shortcut",
-      "icons": [
-        {
-          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
+      "icons": [{
+        "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }]
     },
     {
       "name": "Login",
       "short_name": "Login",
       "description": "Sign in to BuyWater",
       "url": "https://buywater-tamale.onrender.com/login?source=shortcut",
-      "icons": [
-        {
-          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
+      "icons": [{
+        "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }]
     }
   ],
   "icons": [
@@ -135,18 +129,18 @@
   ],
   "screenshots": [
     {
-      "src": "https://buywater-tamale.onrender.com/product.jpg",
-      "sizes": "1080x1080",
-      "type": "image/jpeg",
+      "src": "https://buywater-tamale.onrender.com/icons/screenshot-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
       "form_factor": "narrow",
-      "label": "BuyWater product"
+      "label": "BuyWater Tamale – order water on your phone"
     },
     {
-      "src": "https://buywater-tamale.onrender.com/logo.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
+      "src": "https://buywater-tamale.onrender.com/icons/screenshot-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "BuyWater Tamale logo"
+      "label": "BuyWater Tamale – fresh water delivered"
     }
   ]
 }

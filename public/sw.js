@@ -1,13 +1,6 @@
-/* BuyWater Tamale – Service Worker (offline shell + cache) */
-const CACHE = "buywater-v1";
-const PRECACHE = [
-  "/",
-  "/manifest.json",
-  "/logo.jpg",
-  "/product.jpg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-];
+/* BuyWater Tamale – Service Worker */
+const CACHE = "buywater-v2";
+const PRECACHE = ["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -32,12 +25,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
-
   const url = new URL(req.url);
-  // Never cache API or auth – always network
   if (url.pathname.startsWith("/api/")) return;
 
-  // Network-first for HTML navigations
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
@@ -53,13 +43,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
   event.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
       return fetch(req)
         .then((res) => {
-          if (res.ok && (url.origin === self.location.origin)) {
+          if (res.ok && url.origin === self.location.origin) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
           }
@@ -70,7 +59,6 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Optional: show local notification when page posts a message
 self.addEventListener("message", (event) => {
   const data = event.data || {};
   if (data.type === "NOTIFY" && data.title) {
