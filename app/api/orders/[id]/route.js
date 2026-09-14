@@ -5,6 +5,15 @@ import { notifyAdminOrderCancelled } from "@/lib/email";
 import { logActivity } from "@/lib/activityLogger";
 import { clientIp } from "@/lib/security";
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) =>
+      setTimeout(() => resolve({ ok: false, error: "email timeout" }), ms)
+    ),
+  ]);
+}
+
 export async function GET(request, { params }) {
   try {
     const { id } = params;
@@ -59,6 +68,7 @@ export async function PATCH(request, { params }) {
     const order = await prisma.order.update({ where: { id }, data });
 
     const ip = clientIp(request);
+    let emailResult = null;
     if (data.status === "CANCELLED") {
       await logActivity({
         userId: user.id,
@@ -67,9 +77,12 @@ export async function PATCH(request, { params }) {
         details: `Cancelled ${order.orderNumber}${data.cancelReason ? ` · ${data.cancelReason}` : ""}`,
         ip,
       });
-      notifyAdminOrderCancelled(order).catch((err) =>
-        console.error("cancel notify failed", err)
-      );
+      try {
+        emailResult = await withTimeout(notifyAdminOrderCancelled(order), 12000);
+        console.log("[orders] cancel notify:", emailResult);
+      } catch (err) {
+        console.error("[orders] cancel notify error:", err?.message || err);
+      }
     } else if (data.status) {
       await logActivity({
         userId: user.id,
@@ -80,7 +93,10 @@ export async function PATCH(request, { params }) {
       });
     }
 
-    return NextResponse.json({ order });
+    return NextResponse.json({
+      order,
+      adminEmailSent: emailResult ? !!emailResult.ok : undefined,
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: e.message || "Server error" }, { status: 500 });
