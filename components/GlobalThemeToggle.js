@@ -4,19 +4,23 @@ import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 
 /**
- * Fixed theme control available on every route so toggling
- * light/dark always works and persists site-wide via next-themes.
- * Hidden on routes that already put a toggle in the main header
- * is optional — we keep it always visible for consistency.
+ * Fixed theme control for pages without SiteHeader.
+ * Hidden on /order (uses SiteHeader) and all /admin routes.
  */
 export default function GlobalThemeToggle() {
   const path = usePathname();
-  // Keep available everywhere, including admin
-  const bottom = path?.startsWith("/admin") ? "bottom-5" : "bottom-24";
+
+  const hide =
+    path === "/order" ||
+    path?.startsWith("/order/") ||
+    path?.startsWith("/admin") ||
+    path?.startsWith("/admin-login");
+
+  if (hide) return null;
 
   return (
     <div
-      className={`fixed left-4 z-[60] ${bottom}`}
+      className="fixed bottom-24 left-4 z-[60]"
       title="Toggle light / dark theme for the whole site"
     >
       <ThemeToggle
