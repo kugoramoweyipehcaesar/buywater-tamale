@@ -1,0 +1,21 @@
+{
+  "appId": "com.buywater.tamale",
+  "appName": "BuyWater Tamale",
+  "webDir": "www",
+  "server": {
+    "url": "https://buywater-tamale.onrender.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0077C8"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0077C8",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash"
+    }
+  }
+}

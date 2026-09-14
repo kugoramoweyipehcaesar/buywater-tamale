@@ -1,0 +1,22 @@
+{
+  "name": "buywater-tamale-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor shell for BuyWater Tamale (loads live Render URL)",
+  "scripts": {
+    "cap:add": "npx cap add android",
+    "cap:copy": "npx cap copy",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "build:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/splash-screen": "^6.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}
