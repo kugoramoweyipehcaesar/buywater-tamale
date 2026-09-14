@@ -1,12 +1,12 @@
 {
-  "id": "/",
+  "id": "https://buywater-tamale.onrender.com/",
   "name": "BuyWater Tamale",
   "short_name": "BuyWater",
-  "description": "Fresh water delivery for UDS and environs, Tamale, Ghana",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "description": "Fresh water delivery for UDS and environs, Tamale, Ghana. Order clean water gallons to your hostel door.",
+  "start_url": "https://buywater-tamale.onrender.com/?source=pwa",
+  "scope": "https://buywater-tamale.onrender.com/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "browser"],
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
   "background_color": "#0077C8",
   "theme_color": "#0077C8",
@@ -14,79 +14,139 @@
   "dir": "ltr",
   "categories": ["shopping", "lifestyle", "business"],
   "prefer_related_applications": false,
-  "related_applications": [
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
+  "handle_links": "preferred",
+  "shortcuts": [
     {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.buywater.tamale",
-      "id": "com.buywater.tamale"
+      "name": "Place order",
+      "short_name": "Order",
+      "description": "Order fresh water gallons",
+      "url": "https://buywater-tamale.onrender.com/order?source=shortcut",
+      "icons": [
+        {
+          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My dashboard",
+      "short_name": "Dashboard",
+      "description": "Track your water orders",
+      "url": "https://buywater-tamale.onrender.com/dashboard?source=shortcut",
+      "icons": [
+        {
+          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "short_name": "Login",
+      "description": "Sign in to BuyWater",
+      "url": "https://buywater-tamale.onrender.com/login?source=shortcut",
+      "icons": [
+        {
+          "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "icons": [
     {
-      "src": "/icons/icon-48.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-48.png",
       "sizes": "48x48",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-72.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-72.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-96.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-128.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-128.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-144.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-152.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-152.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-384.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://buywater-tamale.onrender.com/icons/icon-384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "https://buywater-tamale.onrender.com/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/maskable-192.png",
+      "src": "https://buywater-tamale.onrender.com/icons/maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/maskable-512.png",
+      "src": "https://buywater-tamale.onrender.com/icons/maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://buywater-tamale.onrender.com/product.jpg",
+      "sizes": "1080x1080",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "BuyWater product"
+    },
+    {
+      "src": "https://buywater-tamale.onrender.com/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "BuyWater Tamale logo"
     }
   ]
 }
