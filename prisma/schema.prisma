@@ -1,29 +1,31 @@
-// BuyWater – Prisma schema (SQLite)
+// BuyWater – Prisma schema (PostgreSQL on Supabase in production)
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  // Use "postgresql" on Render. For local SQLite only, change to "sqlite" and DATABASE_URL="file:./dev.db"
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Production: Supabase Postgres via DATABASE_URL (pooler) + DIRECT_URL (migrations)
+  // Local SQLite only: change provider to "sqlite", url to env("DATABASE_URL"), remove directUrl
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String
-  name        String?
-  username    String?
-  phone       String?
-  role        String   @default("USER") // USER | ADMIN
-  hostel      String?
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String?
+  username     String?
+  phone        String?
+  role         String   @default("USER") // USER | ADMIN
+  hostel       String?
   customHostel String?
   profilePhoto String?
-  banned      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orders      Order[]
+  banned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
   promoRedemptions PromoRedemption[]
 }
 
@@ -100,7 +102,7 @@ model AppSettings {
   adminEmail           String?
   serviceArea          String?
   contentJson          String?
-  gallonSize           Int      @default(20)
+  gallonSize           Int     @default(20)
 }
 
 model PromotionCode {
