@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut } from "lucide-react";
+import { User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
+
+function isAdminRole(role) {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
 
 export default function SiteHeader({ user }) {
   const path = usePathname();
@@ -46,7 +50,7 @@ export default function SiteHeader({ user }) {
           </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle compact className={onHome ? "!border-white/30 !bg-white/10 !text-white hover:!bg-white/20" : ""} />
-            {user?.role === "ADMIN" && (
+            {isAdminRole(user?.role) && (
               <Link href="/admin" className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${onHome ? "border border-white/30 text-white hover:bg-white/10" : "border border-slate-200 text-[#0B2545] hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"}`}>Admin</Link>
             )}
             {user ? (

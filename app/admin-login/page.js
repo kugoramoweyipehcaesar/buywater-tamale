@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Loader2, Shield } from "lucide-react";
 
+function isAdminRole(role) {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -38,7 +42,7 @@ export default function AdminLoginPage() {
         setError(data.error || "Invalid admin credentials");
         return;
       }
-      if (data.user?.role !== "ADMIN") {
+      if (!isAdminRole(data.user?.role)) {
         setError("This account is not an admin");
         return;
       }
@@ -80,7 +84,6 @@ export default function AdminLoginPage() {
           autoComplete="off"
           method="post"
         >
-          {/* Dummy fields to defeat browser autofill */}
           <input
             type="text"
             name="fake-username"
