@@ -13,8 +13,7 @@
     "db:push": "prisma db push",
     "db:seed": "node scripts/seed.js",
     "db:setup": "prisma generate && prisma db push && node scripts/seed.js",
-    "postinstall": "prisma generate",
-    "render:start": "npx prisma db push && node scripts/seed.js && next start -p ${PORT:-3000}"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
