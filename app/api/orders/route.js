@@ -9,13 +9,8 @@ function genOrderNumber() {
   return "BW-" + Math.floor(10000 + Math.random() * 90000);
 }
 
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) =>
-      setTimeout(() => resolve({ ok: false, error: "email timeout" }), ms)
-    ),
-  ]);
+function isAdminRole(role) {
+  return ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 }
 
 /** List orders – admin sees all, user sees own */
@@ -27,7 +22,7 @@ export async function GET(request) {
     const live = searchParams.get("live");
 
     const where = {};
-    if (user?.role !== "ADMIN") {
+    if (!isAdminRole(user?.role)) {
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -142,19 +137,28 @@ export async function POST(request) {
       action: "ORDER_CREATED",
       details: `Order ${order.orderNumber} — ${order.gallons} gal · Ghc${Number(order.totalAmount).toFixed(2)}${order.hostel ? ` · ${order.hostel}` : ""}`,
       ip,
-    });
+    }).catch(() => {});
 
-    // Ensure admin email is attempted before response (max ~12s)
+    // Admin email — wait up to 25s so SMTP/Resend has time on free tier
     let emailResult = null;
     try {
-      emailResult = await withTimeout(notifyAdminOrderPlaced(order), 12000);
-      console.log("[orders] admin notify:", emailResult);
+      const emailPromise = notifyAdminOrderPlaced(order);
+      const timeoutPromise = new Promise((resolve) =>
+        setTimeout(() => resolve({ ok: false, error: "email timeout 25s" }), 25000)
+      );
+      emailResult = await Promise.race([emailPromise, timeoutPromise]);
+      console.log("[orders] admin notify (placed):", emailResult);
     } catch (err) {
       console.error("[orders] admin notify error:", err?.message || err);
+      emailResult = { ok: false, error: err?.message || "email error" };
     }
 
     return NextResponse.json(
-      { order, adminEmailSent: !!emailResult?.ok },
+      {
+        order,
+        adminEmailSent: !!emailResult?.ok,
+        adminEmailError: emailResult?.ok ? undefined : emailResult?.error || null,
+      },
       { status: 201 }
     );
   } catch (e) {

@@ -5,13 +5,8 @@ import { notifyAdminOrderCancelled } from "@/lib/email";
 import { logActivity } from "@/lib/activityLogger";
 import { clientIp } from "@/lib/security";
 
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) =>
-      setTimeout(() => resolve({ ok: false, error: "email timeout" }), ms)
-    ),
-  ]);
+function isAdminRole(role) {
+  return ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 }
 
 export async function GET(request, { params }) {
@@ -40,7 +35,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const isAdmin = user.role === "ADMIN";
+    const isAdmin = isAdminRole(user.role);
     const isOwner =
       existing.userId === user.id || existing.email === user.email;
 
@@ -76,12 +71,17 @@ export async function PATCH(request, { params }) {
         action: "ORDER_STATUS",
         details: `Cancelled ${order.orderNumber}${data.cancelReason ? ` · ${data.cancelReason}` : ""}`,
         ip,
-      });
+      }).catch(() => {});
       try {
-        emailResult = await withTimeout(notifyAdminOrderCancelled(order), 12000);
+        const emailPromise = notifyAdminOrderCancelled(order);
+        const timeoutPromise = new Promise((resolve) =>
+          setTimeout(() => resolve({ ok: false, error: "email timeout 25s" }), 25000)
+        );
+        emailResult = await Promise.race([emailPromise, timeoutPromise]);
         console.log("[orders] cancel notify:", emailResult);
       } catch (err) {
         console.error("[orders] cancel notify error:", err?.message || err);
+        emailResult = { ok: false, error: err?.message || "email error" };
       }
     } else if (data.status) {
       await logActivity({
@@ -90,12 +90,13 @@ export async function PATCH(request, { params }) {
         action: "ORDER_STATUS",
         details: `${order.orderNumber} → ${data.status}`,
         ip,
-      });
+      }).catch(() => {});
     }
 
     return NextResponse.json({
       order,
       adminEmailSent: emailResult ? !!emailResult.ok : undefined,
+      adminEmailError: emailResult && !emailResult.ok ? emailResult.error : undefined,
     });
   } catch (e) {
     console.error(e);
