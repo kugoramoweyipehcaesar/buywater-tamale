@@ -22,10 +22,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Protect super admin from demotion
+    // Protect SUPER_ADMIN account / role from demotion
     if (
-      target.email === SUPER &&
-      role !== "ADMIN"
+      (target.email === SUPER || target.role === "SUPER_ADMIN") &&
+      role !== "ADMIN" &&
+      role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
         { error: "Cannot demote the super admin" },
