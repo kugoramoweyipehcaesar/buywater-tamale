@@ -4,7 +4,21 @@ import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
 import { clientIp } from "@/lib/security";
 
-const SUPER = "kugoramoweyipehcaesar49@gmail.com";
+const SUPER_EMAIL =
+  process.env.SUPER_ADMIN_EMAIL ||
+  process.env.ADMIN_EMAIL ||
+  "kugoramoweyipehcaesar49@gmail.com";
+
+function isProtectedSuperAdmin(user) {
+  if (!user) return false;
+  if (String(user.role || "").toUpperCase() === "SUPER_ADMIN") return true;
+  if (
+    String(user.email || "").toLowerCase() ===
+    String(SUPER_EMAIL).toLowerCase()
+  )
+    return true;
+  return false;
+}
 
 export async function POST(request) {
   try {
@@ -22,20 +36,13 @@ export async function POST(request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Protect SUPER_ADMIN account / role from demotion
-    if (
-      (target.email === SUPER || target.role === "SUPER_ADMIN") &&
-      role !== "ADMIN" &&
-      role !== "SUPER_ADMIN"
-    ) {
+    // Super admin is untouchable — cannot demote or change role
+    if (isProtectedSuperAdmin(target)) {
       return NextResponse.json(
-        { error: "Cannot demote the super admin" },
+        { error: "Cannot demote or change role of the super admin" },
         { status: 403 }
       );
     }
-
-    // Only super admin can promote/demote others (optional soft rule)
-    // All admins can promote for convenience as requested
 
     const user = await prisma.user.update({
       where: { id: userId },

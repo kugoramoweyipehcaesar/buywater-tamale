@@ -4,6 +4,22 @@ import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/activityLogger";
 import { clientIp } from "@/lib/security";
 
+const SUPER_EMAIL =
+  process.env.SUPER_ADMIN_EMAIL ||
+  process.env.ADMIN_EMAIL ||
+  "kugoramoweyipehcaesar49@gmail.com";
+
+function isProtectedSuperAdmin(user) {
+  if (!user) return false;
+  if (String(user.role || "").toUpperCase() === "SUPER_ADMIN") return true;
+  if (
+    String(user.email || "").toLowerCase() ===
+    String(SUPER_EMAIL).toLowerCase()
+  )
+    return true;
+  return false;
+}
+
 export async function POST(request) {
   try {
     const admin = await requireAdmin();
@@ -20,7 +36,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (target.email === "kugoramoweyipehcaesar49@gmail.com") {
+    // Super admin is untouchable — cannot ban or unban
+    if (isProtectedSuperAdmin(target)) {
       return NextResponse.json(
         { error: "Cannot ban the super admin account" },
         { status: 403 }
