@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const TOKEN_NAME = "buywater_token";
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 function decodeJwtPayload(token) {
   try {
@@ -14,12 +15,13 @@ function decodeJwtPayload(token) {
 }
 
 function isAdminRole(role) {
-  return role === "ADMIN" || role === "SUPER_ADMIN";
+  return ADMIN_ROLES.includes(String(role || "").toUpperCase());
 }
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // Block common attack paths
   if (
     pathname.startsWith("/.env") ||
     pathname.includes("wp-admin") ||
@@ -29,6 +31,7 @@ export async function middleware(request) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Skip maintenance gate for these paths
   const skip =
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
@@ -56,12 +59,14 @@ export async function middleware(request) {
         if (data.settings?.maintenanceMode) {
           const token = request.cookies.get(TOKEN_NAME)?.value;
           const payload = token ? decodeJwtPayload(token) : null;
+          // Allow both ADMIN and SUPER_ADMIN through maintenance
           if (!isAdminRole(payload?.role)) {
             return NextResponse.redirect(new URL("/maintenance", request.url));
           }
         }
       }
     } catch (e) {
+      // Don't block site if settings fetch fails
       console.warn("middleware maintenance check failed", e?.message);
     }
   }
