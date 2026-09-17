@@ -25,6 +25,11 @@ function isAdminRole(role) {
   return ADMIN_ROLES.includes(String(role || "").toUpperCase());
 }
 
+function isSuperProtected(u) {
+  if (!u) return false;
+  return u.email === SUPER || u.role === "SUPER_ADMIN";
+}
+
 export default function UserDirectoryPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -95,6 +100,10 @@ export default function UserDirectoryPage() {
 
   async function toggleBan(u) {
     if (!u) return;
+    if (isSuperProtected(u)) {
+      showToast("Cannot ban the super admin");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/admin/users/ban", {
@@ -118,15 +127,12 @@ export default function UserDirectoryPage() {
 
   async function promoteUser(u) {
     if (!u) return;
-    const nextRole =
-      u.role === "ADMIN" || u.role === "SUPER_ADMIN" ? "USER" : "ADMIN";
-    if (
-      (u.email === SUPER || u.role === "SUPER_ADMIN") &&
-      nextRole !== "ADMIN"
-    ) {
+    if (isSuperProtected(u)) {
       showToast("Cannot demote super admin");
       return;
     }
+    const nextRole =
+      u.role === "ADMIN" || u.role === "SUPER_ADMIN" ? "USER" : "ADMIN";
     if (nextRole === "ADMIN" && !confirm(`Promote ${u.email} to Admin?`))
       return;
     if (nextRole === "USER" && !confirm(`Demote ${u.email} to regular user?`))
@@ -358,47 +364,53 @@ export default function UserDirectoryPage() {
               </dl>
             </div>
             <div className="space-y-2 border-t border-slate-100 p-4 dark:border-zinc-800">
-              {selected.email !== SUPER && selected.role !== "SUPER_ADMIN" && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => promoteUser(selected)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <ShieldCheck className="h-4 w-4" />
-                      {isAdminRole(selected.role)
-                        ? "Demote to user"
-                        : "Promote to Admin"}
-                    </>
-                  )}
-                </button>
+              {isSuperProtected(selected) ? (
+                <p className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center text-sm font-medium text-violet-800 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-200">
+                  Super admin is protected — cannot ban, demote, or delete.
+                </p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => promoteUser(selected)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4" />
+                        {isAdminRole(selected.role)
+                          ? "Demote to user"
+                          : "Promote to Admin"}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => toggleBan(selected)}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60 ${
+                      selected.banned
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-red-600 hover:bg-red-700"
+                    }`}
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : selected.banned ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" /> Unban user
+                      </>
+                    ) : (
+                      <>
+                        <Ban className="h-4 w-4" /> Ban user
+                      </>
+                    )}
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => toggleBan(selected)}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60 ${
-                  selected.banned
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
-              >
-                {busy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : selected.banned ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" /> Unban user
-                  </>
-                ) : (
-                  <>
-                    <Ban className="h-4 w-4" /> Ban user
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
