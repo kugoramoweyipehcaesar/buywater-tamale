@@ -1,36 +1,33 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import {
-  sendTestEmail,
-  isSmtpConfigured,
-  SUPER_ADMIN,
-} from "@/lib/email";
+import { sendTestEmail, SUPER_ADMIN } from "@/lib/email";
 
 export async function POST(request) {
   try {
     await requireAdmin();
     const body = await request.json().catch(() => ({}));
     const to = (body.to || SUPER_ADMIN).toString().trim().toLowerCase();
-
     const result = await sendTestEmail(to);
-
     return NextResponse.json({
       success: !!result.ok,
       result,
-      smtpConfigured: isSmtpConfigured(),
       resendConfigured: !!process.env.RESEND_API_KEY,
+      smtpConfigured: false,
       to,
-      superAdmin: SUPER_ADMIN,
-      hint: !isSmtpConfigured()
-        ? "Set SMTP_HOST, SMTP_USER, SMTP_PASS (Gmail App Password) or RESEND_API_KEY on Render"
+      from: "onboarding@resend.dev",
+      hint: !process.env.RESEND_API_KEY
+        ? "Set RESEND_API_KEY on Render. Remove all SMTP_* variables."
         : result.ok
-          ? "Check inbox and spam for the test message"
-          : "Send failed — check Render logs and SMTP credentials",
+          ? "Check inbox/spam. Free Resend only delivers to your Resend account email."
+          : "Send failed — see result.error and Render logs [email]",
     });
   } catch (e) {
     const status = e.status || 500;
     return NextResponse.json(
-      { error: e.message || "Server error", smtpConfigured: isSmtpConfigured() },
+      {
+        error: e.message || "Server error",
+        resendConfigured: !!process.env.RESEND_API_KEY,
+      },
       { status }
     );
   }
@@ -40,13 +37,11 @@ export async function GET() {
   try {
     await requireAdmin();
     return NextResponse.json({
-      smtpConfigured: isSmtpConfigured(),
       resendConfigured: !!process.env.RESEND_API_KEY,
+      smtpConfigured: false,
       superAdmin: SUPER_ADMIN,
-      hasSmtpHost: !!(process.env.SMTP_HOST || process.env.EMAIL_HOST),
-      hasSmtpUser: !!(process.env.SMTP_USER || process.env.EMAIL_USER),
-      hasSmtpPass: !!(process.env.SMTP_PASS || process.env.EMAIL_PASS),
-      from: process.env.SMTP_FROM || process.env.EMAIL_FROM || null,
+      from: "onboarding@resend.dev",
+      hasResendKey: !!process.env.RESEND_API_KEY,
     });
   } catch (e) {
     const status = e.status || 500;
