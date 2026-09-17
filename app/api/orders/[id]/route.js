@@ -73,11 +73,7 @@ export async function PATCH(request, { params }) {
         ip,
       }).catch(() => {});
       try {
-        const emailPromise = notifyAdminOrderCancelled(order);
-        const timeoutPromise = new Promise((resolve) =>
-          setTimeout(() => resolve({ ok: false, error: "email timeout 25s" }), 25000)
-        );
-        emailResult = await Promise.race([emailPromise, timeoutPromise]);
+        emailResult = await notifyAdminOrderCancelled(order);
         console.log("[orders] cancel notify:", emailResult);
       } catch (err) {
         console.error("[orders] cancel notify error:", err?.message || err);
@@ -96,11 +92,15 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({
       order,
       adminEmailSent: emailResult ? !!emailResult.ok : undefined,
-      adminEmailError: emailResult && !emailResult.ok ? emailResult.error : undefined,
+      adminEmailError:
+        emailResult && !emailResult.ok ? emailResult.error : undefined,
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: e.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: e.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -112,6 +112,9 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: true });
   } catch (e) {
     const status = e.status || 500;
-    return NextResponse.json({ error: e.message || "Server error" }, { status });
+    return NextResponse.json(
+      { error: e.message || "Server error" },
+      { status }
+    );
   }
 }

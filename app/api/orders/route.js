@@ -13,7 +13,6 @@ function isAdminRole(role) {
   return ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 }
 
-/** List orders – admin sees all, user sees own */
 export async function GET(request) {
   try {
     const user = await getCurrentUser();
@@ -28,9 +27,7 @@ export async function GET(request) {
       }
       where.OR = [{ userId: user.id }, { email: user.email }];
     }
-    if (status) {
-      where.status = status;
-    }
+    if (status) where.status = status;
     if (live === "1") {
       where.status = {
         in: ["PENDING", "PROCESSING", "CONFIRMED", "ON_THE_WAY"],
@@ -49,13 +46,14 @@ export async function GET(request) {
   }
 }
 
-/** Create order */
 export async function POST(request) {
   try {
     const user = await getCurrentUser();
     const body = await request.json();
 
-    const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+    const settings = await prisma.appSettings.findFirst({
+      orderBy: { id: "asc" },
+    });
     if (settings?.maintenanceMode) {
       return NextResponse.json(
         {
@@ -76,28 +74,28 @@ export async function POST(request) {
     const method = String(body.paymentMethod || "cash_on_delivery").toLowerCase();
     const isMomo = method === "momo" || method.includes("momo");
     const isCash =
-      method === "cash_on_delivery" || method === "cash" || method.includes("cash");
+      method === "cash_on_delivery" ||
+      method === "cash" ||
+      method.includes("cash");
 
     if (settings) {
       if (isCash && settings.cashEnabled === false) {
         return NextResponse.json(
-          { error: "Cash on delivery is not available. Choose another payment method." },
+          {
+            error:
+              "Cash on delivery is not available. Choose another payment method.",
+          },
           { status: 400 }
         );
       }
       if (isMomo && settings.momoEnabled === false) {
         return NextResponse.json(
-          { error: "Mobile Money is not available. Choose another payment method." },
+          {
+            error:
+              "Mobile Money is not available. Choose another payment method.",
+          },
           { status: 400 }
         );
-      }
-      if (!isCash && !isMomo) {
-        if (settings.cashEnabled === false && settings.momoEnabled === false) {
-          return NextResponse.json(
-            { error: "No payment methods are enabled." },
-            { status: 400 }
-          );
-        }
       }
     }
 
@@ -114,9 +112,10 @@ export async function POST(request) {
         customHostel: body.customHostel || "",
         roomNumber: body.roomNumber || "",
         blockNumber: body.blockNumber || "",
-        products: typeof body.products === "string"
-          ? body.products
-          : JSON.stringify(body.products || []),
+        products:
+          typeof body.products === "string"
+            ? body.products
+            : JSON.stringify(body.products || []),
         gallons: Number(body.gallons) || 1,
         totalAmount: Number(body.totalAmount) || 0,
         paymentMethod: body.paymentMethod || "cash_on_delivery",
@@ -139,14 +138,9 @@ export async function POST(request) {
       ip,
     }).catch(() => {});
 
-    // Admin email — wait up to 25s so SMTP/Resend has time on free tier
     let emailResult = null;
     try {
-      const emailPromise = notifyAdminOrderPlaced(order);
-      const timeoutPromise = new Promise((resolve) =>
-        setTimeout(() => resolve({ ok: false, error: "email timeout 25s" }), 25000)
-      );
-      emailResult = await Promise.race([emailPromise, timeoutPromise]);
+      emailResult = await notifyAdminOrderPlaced(order);
       console.log("[orders] admin notify (placed):", emailResult);
     } catch (err) {
       console.error("[orders] admin notify error:", err?.message || err);
@@ -157,12 +151,17 @@ export async function POST(request) {
       {
         order,
         adminEmailSent: !!emailResult?.ok,
-        adminEmailError: emailResult?.ok ? undefined : emailResult?.error || null,
+        adminEmailError: emailResult?.ok
+          ? undefined
+          : emailResult?.error || null,
       },
       { status: 201 }
     );
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: e.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: e.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
