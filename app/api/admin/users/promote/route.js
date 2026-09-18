@@ -25,7 +25,9 @@ export async function POST(request) {
     const admin = await requireAdmin();
     const body = await request.json();
     const userId = body.userId;
-    const role = body.role === "ADMIN" ? "ADMIN" : "USER";
+    const requested = String(body.role || "USER").toUpperCase();
+    const allowed = ["USER", "ADMIN", "RIDER"];
+    const role = allowed.includes(requested) ? requested : "USER";
 
     if (!userId) {
       return NextResponse.json({ error: "userId required" }, { status: 400 });
@@ -62,7 +64,12 @@ export async function POST(request) {
     await logActivity({
       userId: admin.id,
       email: admin.email,
-      action: role === "ADMIN" ? "USER_PROMOTED_ADMIN" : "USER_DEMOTED",
+      action:
+        role === "ADMIN"
+          ? "USER_PROMOTED_ADMIN"
+          : role === "RIDER"
+            ? "USER_PROMOTED_RIDER"
+            : "USER_DEMOTED",
       details: `${target.email} → ${role}`,
       ip: clientIp(request),
     }).catch(() => {});
