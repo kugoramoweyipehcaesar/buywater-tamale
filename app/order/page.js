@@ -417,49 +417,45 @@ export default function OrderPage() {
             )}
           </div>
 
-          {momoEnabled && (
-            <div className="mb-4 rounded-xl border-2 border-[#0077C8] bg-sky-50 px-4 py-3 shadow-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#0077C8]">
-                Send Mobile Money to
-              </p>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-lg font-bold tracking-wide text-black">
-                    {settings?.momoNumber || "0531448824"}
-                  </p>
-                  <p className="text-sm text-slate-800">
-                    Name:{" "}
-                    <span className="font-semibold">
-                      {settings?.momoName || "BuyWater"}
-                    </span>
-                  </p>
-                </div>
-                {(settings?.momoNumber2 || settings?.momoName2) && (
-                  <div className="border-t border-sky-200 pt-2">
-                    <p className="text-xs font-medium text-slate-500">
-                      Alternative number
-                    </p>
-                    <p className="text-lg font-bold tracking-wide text-black">
-                      {settings?.momoNumber2}
-                    </p>
-                    {settings?.momoName2 && (
-                      <p className="text-sm text-slate-800">
-                        Name:{" "}
-                        <span className="font-semibold">{settings.momoName2}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-slate-600">
-                Pay the total amount to one of the numbers above, then select
-                Mobile Money and enter your sender number / reference.
-              </p>
-            </div>
-          )}
-
           {paymentMethod === "momo" && momoEnabled && (
-            <div className="mb-4 space-y-2">
+            <div className="mb-4 space-y-3">
+              <div className="rounded-xl border-2 border-[#0077C8] bg-sky-50 px-4 py-3 shadow-sm">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#0077C8]">
+                  Send Mobile Money to
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-lg font-bold tracking-wide text-black">
+                      {settings?.momoNumber || "0531448824"}
+                    </p>
+                    <p className="text-sm text-slate-800">
+                      Name:{" "}
+                      <span className="font-semibold">
+                        {settings?.momoName || "BuyWater"}
+                      </span>
+                    </p>
+                  </div>
+                  {(settings?.momoNumber2 || settings?.momoName2) && (
+                    <div className="border-t border-sky-200 pt-2">
+                      <p className="text-xs font-medium text-slate-500">
+                        Alternative number
+                      </p>
+                      <p className="text-lg font-bold tracking-wide text-black">
+                        {settings?.momoNumber2}
+                      </p>
+                      {settings?.momoName2 && (
+                        <p className="text-sm text-slate-800">
+                          Name:{" "}
+                          <span className="font-semibold">{settings.momoName2}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-slate-600">
+                  After paying, enter your sender number and reference below so we can confirm.
+                </p>
+              </div>
               <label className="block text-xs font-medium text-slate-600">
                 Your MoMo number (the one you paid from)
               </label>
