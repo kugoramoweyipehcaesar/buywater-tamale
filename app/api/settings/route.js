@@ -44,6 +44,20 @@ const NUM = new Set([
   "gallonSize",
 ]);
 
+function parseExtra(contentJson) {
+  try {
+    return contentJson ? JSON.parse(contentJson) : {};
+  } catch {
+    return {};
+  }
+}
+
+function withOutOfStock(settings) {
+  if (!settings) return settings;
+  const extra = parseExtra(settings.contentJson);
+  return { ...settings, outOfStock: !!extra.outOfStock };
+}
+
 function pick(body) {
   const data = {};
   for (const k of ALLOWED) {
@@ -84,7 +98,7 @@ export async function GET() {
         },
       });
     }
-    return NextResponse.json({ settings });
+    return NextResponse.json({ settings: withOutOfStock(settings) });
   } catch (e) {
     console.error("settings GET", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -94,7 +108,21 @@ export async function GET() {
 export async function PATCH(request) {
   try {
     await requireAdmin();
-    const body = pick(await request.json());
+    const raw = await request.json();
+    const body = pick(raw);
+
+    // outOfStock stored in contentJson (no schema migration required)
+    if (raw.outOfStock !== undefined) {
+      let settingsRow = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+      const extra = parseExtra(settingsRow?.contentJson);
+      extra.outOfStock =
+        raw.outOfStock === true ||
+        raw.outOfStock === "true" ||
+        raw.outOfStock === 1 ||
+        raw.outOfStock === "1";
+      body.contentJson = JSON.stringify(extra);
+    }
+
     if (Object.keys(body).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
@@ -103,13 +131,22 @@ export async function PATCH(request) {
     if (!settings) {
       settings = await prisma.appSettings.create({ data: body });
     } else {
+      if (body.contentJson && settings.contentJson && raw.outOfStock === undefined) {
+        try {
+          const incoming = JSON.parse(body.contentJson);
+          const existing = JSON.parse(settings.contentJson);
+          if (incoming.outOfStock === undefined && existing.outOfStock !== undefined) {
+            incoming.outOfStock = existing.outOfStock;
+            body.contentJson = JSON.stringify(incoming);
+          }
+        } catch (_) {}
+      }
       settings = await prisma.appSettings.update({
         where: { id: settings.id },
         data: body,
       });
     }
 
-    // Live site-wide refresh
     try {
       revalidatePath("/");
       revalidatePath("/order");
@@ -119,7 +156,7 @@ export async function PATCH(request) {
       console.warn("revalidatePath", e.message);
     }
 
-    return NextResponse.json({ settings, success: true, live: true });
+    return NextResponse.json({ settings: withOutOfStock(settings), success: true, live: true });
   } catch (e) {
     console.error("settings PATCH", e);
     const status = e.status || 500;
