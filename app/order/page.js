@@ -418,18 +418,57 @@ export default function OrderPage() {
           </div>
 
           {paymentMethod === "momo" && momoEnabled && (
-            <div className="mb-4 space-y-2">
+            <div className="mb-4 space-y-3">
+              <div className="rounded-xl border border-[#0077C8]/25 bg-[#0077C8]/5 px-4 py-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#0077C8]">
+                  Send Mobile Money to
+                </p>
+                {(settings?.momoNumber || settings?.momoName) ? (
+                  <div className="space-y-1">
+                    <p className="text-base font-bold text-black">
+                      {settings?.momoNumber || "—"}
+                    </p>
+                    {settings?.momoName ? (
+                      <p className="text-sm text-slate-700">
+                        Name: <span className="font-semibold">{settings.momoName}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-amber-800">
+                    MoMo details not set yet. Contact admin.
+                  </p>
+                )}
+                {(settings?.momoNumber2 || settings?.momoName2) ? (
+                  <div className="mt-3 border-t border-[#0077C8]/20 pt-3">
+                    <p className="mb-1 text-xs font-medium text-slate-500">
+                      Alternative number
+                    </p>
+                    <p className="text-base font-bold text-black">
+                      {settings?.momoNumber2 || "—"}
+                    </p>
+                    {settings?.momoName2 ? (
+                      <p className="text-sm text-slate-700">
+                        Name: <span className="font-semibold">{settings.momoName2}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+                <p className="mt-2 text-xs text-slate-600">
+                  After paying, enter your number and reference below so we can confirm.
+                </p>
+              </div>
               <input
                 value={momoNumber}
                 onChange={(e) => setMomoNumber(e.target.value)}
-                placeholder="Your MoMo number"
-                className="w-full rounded-xl border px-3 py-2.5 text-sm text-black"
+                placeholder="Your MoMo number (sender)"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black"
               />
               <input
                 value={momoReference}
                 onChange={(e) => setMomoReference(e.target.value)}
                 placeholder="Transaction reference (optional)"
-                className="w-full rounded-xl border px-3 py-2.5 text-sm text-black"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-black"
               />
             </div>
           )}
