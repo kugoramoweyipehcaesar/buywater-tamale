@@ -14,6 +14,8 @@ export async function GET(request) {
     const where = {};
     if (role === "admins" || role === "admin") {
       where.role = { in: ["ADMIN", "SUPER_ADMIN"] };
+    } else if (role === "riders" || role === "rider") {
+      where.role = "RIDER";
     } else if (role === "customers" || role === "user") {
       where.role = "USER";
     }
@@ -30,9 +32,10 @@ export async function GET(request) {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const [total, admins, newUsers, users, activeToday] = await Promise.all([
+    const [total, admins, riders, newUsers, users, activeToday] = await Promise.all([
       prisma.user.count({ where }),
       prisma.user.count({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } } }),
+      prisma.user.count({ where: { role: "RIDER" } }),
       prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
       prisma.user.findMany({
         where,
@@ -74,6 +77,7 @@ export async function GET(request) {
       stats: {
         totalUsers: totalAll,
         admins,
+        riders,
         activeToday,
         newUsers7d: newUsers,
       },
