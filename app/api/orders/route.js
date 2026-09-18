@@ -12,6 +12,10 @@ function genOrderNumber() {
 function isAdminRole(role) {
   return ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 }
+function isStaffRole(role) {
+  const r = String(role || "").toUpperCase();
+  return r === "ADMIN" || r === "SUPER_ADMIN" || r === "RIDER";
+}
 
 export async function GET(request) {
   try {
@@ -21,7 +25,7 @@ export async function GET(request) {
     const live = searchParams.get("live");
 
     const where = {};
-    if (!isAdminRole(user?.role)) {
+    if (!isStaffRole(user?.role)) {
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -51,44 +55,9 @@ export async function POST(request) {
     const user = await getCurrentUser();
     const body = await request.json();
 
-    const settings = await prisma.appSettings.findFirst({
-      orderBy: { id: "asc" },
-    });
-    if (settings?.maintenanceMode) {
-      return NextResponse.json(
-        {
-          error:
-            settings.maintenanceMessage ||
-            "Site is under maintenance. Ordering is temporarily unavailable.",
-        },
-        { status: 503 }
-      );
-    }
-    if (settings && settings.serviceActive === false) {
-      return NextResponse.json(
-        { error: "Ordering is currently disabled." },
-        { status: 503 }
-      );
-    }
-
-    const method = String(body.paymentMethod || "cash_on_delivery").toLowerCase();
-    const isMomo = method === "momo" || method.includes("momo");
-    const isCash =
-      method === "cash_on_delivery" ||
-      method === "cash" ||
-      method.includes("cash");
-
-    if (settings) {
-      if (isCash && settings.cashEnabled === false) {
-        return NextResponse.json(
-          {
-            error:
-              "Cash on delivery is not available. Choose another payment method.",
-          },
-          { status: 400 }
-        );
-      }
-      if (isMomo && settings.momoEnabled === false) {
+    if (body.paymentMethod === "momo") {
+      const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+      if (settings && settings.momoEnabled === false) {
         return NextResponse.json(
           {
             error:
@@ -97,6 +66,23 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+    }
+
+    // Inventory / capacity gate
+    try {
+      const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+      let extra = {};
+      try {
+        extra = settings?.contentJson ? JSON.parse(settings.contentJson) : {};
+      } catch (_) {}
+      if (extra.outOfStock) {
+        return NextResponse.json(
+          { error: "Out of stock today. Ordering is temporarily unavailable." },
+          { status: 403 }
+        );
+      }
+    } catch (stockErr) {
+      console.warn("stock check", stockErr?.message);
     }
 
     const order = await prisma.order.create({
