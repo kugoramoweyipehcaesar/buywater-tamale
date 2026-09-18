@@ -36,16 +36,18 @@ export async function PATCH(request, { params }) {
     }
 
     const isAdmin = isAdminRole(user.role);
+    const isStaff =
+      isAdmin || String(user.role || "").toUpperCase() === "RIDER";
     const isOwner =
       existing.userId === user.id || existing.email === user.email;
 
-    if (!isAdmin && !isOwner) {
+    if (!isStaff && !isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const data = {};
     if (body.status != null) {
-      if (!isAdmin && body.status !== "CANCELLED") {
+      if (!isStaff && body.status !== "CANCELLED") {
         return NextResponse.json(
           { error: "Customers can only cancel orders" },
           { status: 403 }
@@ -55,7 +57,7 @@ export async function PATCH(request, { params }) {
     }
     if (body.cancelReason != null) data.cancelReason = body.cancelReason;
     if (body.notes != null) data.notes = body.notes;
-    if (isAdmin) {
+    if (isStaff) {
       if (body.driverName != null) data.driverName = body.driverName;
       if (body.driverPhone != null) data.driverPhone = body.driverPhone;
     }
