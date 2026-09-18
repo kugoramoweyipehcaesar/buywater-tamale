@@ -31,6 +31,15 @@ export async function middleware(request) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Riders cannot access admin UI — send them to /rider
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin-login")) {
+    const token = request.cookies.get(TOKEN_NAME)?.value;
+    const payload = token ? decodeJwtPayload(token) : null;
+    if (String(payload?.role || "").toUpperCase() === "RIDER") {
+      return NextResponse.redirect(new URL("/rider", request.url));
+    }
+  }
+
   // Skip maintenance gate for these paths
   const skip =
     pathname.startsWith("/api") ||
@@ -38,6 +47,7 @@ export async function middleware(request) {
     pathname.startsWith("/maintenance") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/admin-login") ||
+    pathname.startsWith("/rider") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/forgot-password") ||
