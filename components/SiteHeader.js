@@ -49,6 +49,9 @@ export default function SiteHeader({ user }) {
             {["ADMIN", "SUPER_ADMIN"].includes(user?.role) && (
               <Link href="/admin" className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${onHome ? "border border-white/30 text-white hover:bg-white/10" : "border border-slate-200 text-[#0B2545] hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"}`}>Admin</Link>
             )}
+            {user?.role === "RIDER" && (
+              <Link href="/rider" className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${onHome ? "border border-white/30 text-white hover:bg-white/10" : "border border-slate-200 text-[#0B2545] hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"}`}>Rider</Link>
+            )}
             {user ? (
               <>
                 <Link href="/dashboard" className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${onHome ? "bg-white/15 text-white hover:bg-white/25" : "bg-[#0077C8]/10 text-[#0077C8] hover:bg-[#0077C8]/20 dark:bg-sky-500/15 dark:text-sky-400"}`}>Order</Link>
