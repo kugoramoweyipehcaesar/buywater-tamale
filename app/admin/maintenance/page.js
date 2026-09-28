@@ -11,6 +11,7 @@ import {
   Shield,
   Save,
   MessageCircle,
+  Phone,
 } from "lucide-react";
 
 const SUPER = "kugoramoweyipehcaesar49@gmail.com";
@@ -24,7 +25,8 @@ export default function AdminMaintenancePage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [outOfStock, setOutOfStock] = useState(false);
-  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [callNumber1, setCallNumber1] = useState("");
+  const [callNumber2, setCallNumber2] = useState("");
   const [showReset, setShowReset] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [resetting, setResetting] = useState(false);
@@ -54,8 +56,11 @@ export default function AdminMaintenancePage() {
       try {
         extra = s.contentJson ? JSON.parse(s.contentJson) : {};
       } catch (_) {}
-      setWhatsappNumber(
-        extra.whatsappNumber || s.adminPhone || s.momoNumber || ""
+      setCallNumber1(
+        extra.whatsappNumber || s.adminPhone || s.momoNumber || "0531448824"
+      );
+      setCallNumber2(
+        extra.secondaryPhone || extra.callNumber2 || s.momoNumber2 || "0594963356"
       );
     } catch {
       router.push("/admin-login");
@@ -68,7 +73,7 @@ export default function AdminMaintenancePage() {
     load();
   }, [load]);
 
-  async function persist(mode, message, stock, wa) {
+  async function persist(mode, message, stock, phones) {
     setBusy(true);
     try {
       const payload = {
@@ -76,9 +81,10 @@ export default function AdminMaintenancePage() {
         maintenanceMessage: message,
       };
       if (stock !== undefined) payload.outOfStock = stock;
-      if (wa !== undefined) {
-        payload.whatsappNumber = wa;
-        payload.adminPhone = wa;
+      if (phones) {
+        payload.whatsappNumber = phones.n1;
+        payload.adminPhone = phones.n1;
+        payload.secondaryPhone = phones.n2;
       }
       const res = await fetch("/api/settings", {
         method: "PATCH",
@@ -134,10 +140,13 @@ export default function AdminMaintenancePage() {
     }
   }
 
-  async function saveWhatsApp() {
+  async function saveCallNumbers() {
     try {
-      await persist(maintenanceMode, maintenanceMessage, undefined, whatsappNumber);
-      showToast("WhatsApp number saved — live on home page");
+      await persist(maintenanceMode, maintenanceMessage, undefined, {
+        n1: callNumber1.trim(),
+        n2: callNumber2.trim(),
+      });
+      showToast("Call / WhatsApp numbers saved — live on home footer");
     } catch (e) {
       showToast(e.message || "Save failed");
     }
@@ -201,33 +210,65 @@ export default function AdminMaintenancePage() {
           <div>
             <h1 className="text-xl font-bold text-black">Maintenance Mode</h1>
             <p className="text-sm text-slate-500">
-              Toggle site-wide notice, WhatsApp, and reset orders
+              Site notice, Call/WhatsApp numbers, and reset orders
             </p>
           </div>
         </div>
 
-        <section className="mb-4 rounded-2xl border border-green-200 bg-green-50 p-4">
-          <div className="mb-2 flex items-center gap-2">
+        {/* Call / WhatsApp — both footer numbers */}
+        <section className="mb-4 rounded-2xl border border-green-200 bg-green-50 p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <Phone className="h-5 w-5 text-green-700" />
             <MessageCircle className="h-5 w-5 text-green-600" />
-            <h2 className="text-sm font-bold text-green-900">WhatsApp number (home page)</h2>
+            <h2 className="text-sm font-bold text-green-900">
+              Call / WhatsApp numbers (home footer)
+            </h2>
           </div>
-          <p className="mb-2 text-xs text-green-800/80">
-            Customers click WhatsApp on the home page and open a DM to this number.
+          <p className="mb-3 text-xs text-green-800/80">
+            Shown on the home page footer as:{" "}
+            <span className="font-semibold">
+              Call / WhatsApp: {callNumber1 || "—"} / {callNumber2 || "—"}
+            </span>
+            . Number 1 is also used for the WhatsApp DM button.
           </p>
-          <input
-            value={whatsappNumber}
-            onChange={(e) => setWhatsappNumber(e.target.value)}
-            placeholder="e.g. 0531448824 or 233531448824"
-            className="mb-3 w-full rounded-xl border border-green-200 bg-white px-3 py-2.5 text-sm text-black"
-          />
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-green-900">
+                Number 1 (primary / WhatsApp DM)
+              </label>
+              <input
+                value={callNumber1}
+                onChange={(e) => setCallNumber1(e.target.value)}
+                placeholder="e.g. 0531448824"
+                className="w-full rounded-xl border border-green-200 bg-white px-3 py-2.5 text-sm text-black"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-green-900">
+                Number 2 (secondary)
+              </label>
+              <input
+                value={callNumber2}
+                onChange={(e) => setCallNumber2(e.target.value)}
+                placeholder="e.g. 0594963356"
+                className="w-full rounded-xl border border-green-200 bg-white px-3 py-2.5 text-sm text-black"
+              />
+            </div>
+          </div>
+          <div className="mb-3 rounded-xl border border-green-200 bg-white/80 px-3 py-2 text-center text-sm text-slate-700">
+            Preview:{" "}
+            <span className="font-semibold text-[#0B2545]">
+              Call / WhatsApp: {callNumber1 || "…"} / {callNumber2 || "…"}
+            </span>
+          </div>
           <button
             type="button"
             disabled={busy}
-            onClick={saveWhatsApp}
+            onClick={saveCallNumbers}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save WhatsApp number
+            Save Call / WhatsApp numbers
           </button>
         </section>
 

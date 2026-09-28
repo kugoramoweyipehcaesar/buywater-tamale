@@ -55,11 +55,20 @@ function parseExtra(contentJson) {
 function withExtras(settings) {
   if (!settings) return settings;
   const extra = parseExtra(settings.contentJson);
+  const whatsappNumber =
+    extra.whatsappNumber || settings.adminPhone || settings.momoNumber || "";
+  const secondaryPhone =
+    extra.secondaryPhone ||
+    extra.callNumber2 ||
+    settings.momoNumber2 ||
+    "";
   return {
     ...settings,
     outOfStock: !!extra.outOfStock,
-    whatsappNumber:
-      extra.whatsappNumber || settings.adminPhone || settings.momoNumber || "",
+    whatsappNumber,
+    secondaryPhone,
+    callNumber1: whatsappNumber,
+    callNumber2: secondaryPhone,
   };
 }
 
@@ -100,6 +109,10 @@ export async function GET() {
           serviceArea: "Tamale UDS and environs",
           adminPhone: "0531448824",
           momoNumber: "0502748671",
+          contentJson: JSON.stringify({
+            whatsappNumber: "0531448824",
+            secondaryPhone: "0594963356",
+          }),
         },
       });
     }
@@ -134,7 +147,11 @@ export async function PATCH(request) {
       }
     }
 
-    // merge other contentJson fields if client sent full contentJson
+    if (raw.secondaryPhone !== undefined) {
+      extra.secondaryPhone = String(raw.secondaryPhone || "").trim();
+      extra.callNumber2 = extra.secondaryPhone;
+    }
+
     if (raw.contentJson !== undefined && typeof raw.contentJson === "string") {
       try {
         const incoming = JSON.parse(raw.contentJson);

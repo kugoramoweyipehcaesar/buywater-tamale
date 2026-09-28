@@ -49,15 +49,22 @@ export default function HomePage() {
   const deliveryMax = settings?.deliveryTimeMax ?? 60;
   const subPrice = settings?.subscriptionPrice ?? 22;
   const subGallons = settings?.subscriptionGallons ?? 10;
-  const waDisplay =
-    settings?.whatsappNumber || settings?.adminPhone || "0531448824";
-  const adminPhoneDigits = toWhatsAppDigits(waDisplay);
+  const call1 =
+    settings?.whatsappNumber ||
+    settings?.callNumber1 ||
+    settings?.adminPhone ||
+    "0531448824";
+  const call2 =
+    settings?.secondaryPhone ||
+    settings?.callNumber2 ||
+    settings?.momoNumber2 ||
+    "0594963356";
+  const adminPhoneDigits = toWhatsAppDigits(call1);
   const serviceArea = settings?.serviceArea || "Tamale UDS and environs";
   const heroTitle = settings?.heroTitle || "Fresh Water Delivered";
   const productDesc =
     settings?.productDescription ||
     "Hygienically produced, affordably priced water gallons delivered fresh to your hostel door.";
-  const momoNumber = settings?.momoNumber || "0502748671";
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -293,7 +300,7 @@ export default function HomePage() {
               <div>
                 <p className="font-semibold text-[#0B2545]">WhatsApp</p>
                 <p className="text-sm text-slate-600">
-                  {waDisplay} — Fastest response · opens DM
+                  {call1} — Fastest response · opens DM
                 </p>
               </div>
             </a>
@@ -368,7 +375,7 @@ export default function HomePage() {
             {serviceArea} · Tamale, Northern Region, Ghana
           </p>
           <p className="text-sm text-white/70">
-            Call / WhatsApp: {waDisplay} / {momoNumber}
+            Call / WhatsApp: {call1} / {call2}
           </p>
           <p className="mt-3 text-xs text-white/40">
             © {new Date().getFullYear()} BuyWater. Fresh Water Delivered.
