@@ -9,12 +9,43 @@ function genOrderNumber() {
   return "BW-" + Math.floor(10000 + Math.random() * 90000);
 }
 
-function isAdminRole(role) {
-  return ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
-}
 function isStaffRole(role) {
   const r = String(role || "").toUpperCase();
   return r === "ADMIN" || r === "SUPER_ADMIN" || r === "RIDER";
+}
+
+async function redeemPromoForUser(promoId, code, user, orderId) {
+  if (!promoId || !user?.id) return null;
+  const promo = await prisma.promotionCode.findUnique({ where: { id: promoId } });
+  if (!promo || !promo.active) return null;
+  if (promo.maxUses && promo.timesUsed >= promo.maxUses) return null;
+
+  try {
+    const existing = await prisma.promoRedemption.findUnique({
+      where: { promoId_userId: { promoId: promo.id, userId: user.id } },
+    });
+    if (existing) return existing;
+  } catch (_) {}
+
+  try {
+    await prisma.promoRedemption.create({
+      data: {
+        promoId: promo.id,
+        userId: user.id,
+        orderId: orderId || null,
+        code: promo.code || code || "",
+      },
+    });
+  } catch (e) {
+    if (String(e.code) === "P2002") return null;
+    console.warn("promoRedemption", e.message);
+  }
+
+  const updated = await prisma.promotionCode.update({
+    where: { id: promo.id },
+    data: { timesUsed: { increment: 1 } },
+  });
+  return updated;
 }
 
 export async function GET(request) {
@@ -68,7 +99,6 @@ export async function POST(request) {
       }
     }
 
-    // Inventory / capacity gate
     try {
       const settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
       let extra = {};
@@ -83,6 +113,13 @@ export async function POST(request) {
       }
     } catch (stockErr) {
       console.warn("stock check", stockErr?.message);
+    }
+
+    const promoId = body.promoId || null;
+    const promoCode = body.promoCode || "";
+    let notes = body.notes || "";
+    if (promoCode && !notes.includes("Promo:")) {
+      notes = `Promo: ${String(promoCode).toUpperCase()}${notes ? " — " + notes : ""}`;
     }
 
     const order = await prisma.order.create({
@@ -109,33 +146,53 @@ export async function POST(request) {
         momoReference: body.momoReference || "",
         status: "PENDING",
         isSubscription: !!body.isSubscription,
-        notes: body.notes || "",
+        notes,
         deliveryNotes: body.deliveryNotes || "",
         userId: user?.id || null,
       },
     });
+
+    // Always increment promo usage server-side when promo is applied
+    let promoUpdated = null;
+    if (promoId && user?.id) {
+      try {
+        promoUpdated = await redeemPromoForUser(
+          promoId,
+          promoCode,
+          user,
+          order.id
+        );
+      } catch (err) {
+        console.error("[orders] promo redeem", err?.message || err);
+      }
+    }
 
     const ip = clientIp(request);
     await logActivity({
       userId: user?.id || null,
       email: order.email || user?.email || null,
       action: "ORDER_CREATED",
-      details: `Order ${order.orderNumber} — ${order.gallons} gal · Ghc${Number(order.totalAmount).toFixed(2)}${order.hostel ? ` · ${order.hostel}` : ""}`,
+      details: `Order ${order.orderNumber} — ${order.gallons} gal · Ghc${Number(order.totalAmount).toFixed(2)}${order.hostel ? ` · ${order.hostel}` : ""}${promoUpdated ? ` · promo ${promoUpdated.code} ${promoUpdated.timesUsed}/${promoUpdated.maxUses}` : ""}`,
       ip,
     }).catch(() => {});
 
     let emailResult = null;
     try {
       emailResult = await notifyAdminOrderPlaced(order);
-      console.log("[orders] admin notify (placed):", emailResult);
     } catch (err) {
-      console.error("[orders] admin notify error:", err?.message || err);
       emailResult = { ok: false, error: err?.message || "email error" };
     }
 
     return NextResponse.json(
       {
         order,
+        promo: promoUpdated
+          ? {
+              code: promoUpdated.code,
+              timesUsed: promoUpdated.timesUsed,
+              maxUses: promoUpdated.maxUses,
+            }
+          : null,
         adminEmailSent: !!emailResult?.ok,
         adminEmailError: emailResult?.ok
           ? undefined

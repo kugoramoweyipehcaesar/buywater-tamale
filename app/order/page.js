@@ -154,6 +154,8 @@ export default function OrderPage() {
           momoNumber: paymentMethod === "momo" ? momoNumber : "",
           momoReference: paymentMethod === "momo" ? momoReference : "",
           isSubscription,
+          promoId: promoApplied?.id || null,
+          promoCode: promoApplied?.code || "",
           notes: promoApplied
             ? `Promo: ${promoApplied.code} — ${promoApplied.rewardValue} free gallons`
             : "",
@@ -171,6 +173,7 @@ export default function OrderPage() {
         setOrderError(data.error || "Order failed");
         return;
       }
+      // Client-side backup redeem (server already increments)
       if (promoApplied?.id) {
         try {
           await fetch("/api/promotions", {
@@ -184,7 +187,11 @@ export default function OrderPage() {
           });
         } catch (_) {}
       }
-      setOrderSuccess(`Order ${data.order.orderNumber} placed!`);
+      const usage =
+        data.promo && data.promo.maxUses
+          ? ` (${data.promo.timesUsed}/${data.promo.maxUses} uses)`
+          : "";
+      setOrderSuccess(`Order ${data.order.orderNumber} placed!${usage}`);
       setTimeout(() => router.push("/dashboard?tab=tracking"), 1200);
     } catch {
       setOrderError("Network error");
@@ -358,7 +365,9 @@ export default function OrderPage() {
             <button type="button" onClick={applyPromo} className="rounded-xl border px-4 text-sm font-semibold text-[#0077C8]">Apply</button>
           </div>
           {promoApplied && (
-            <p className="mb-3 text-xs text-green-600">Promo applied: +{promoApplied.rewardValue} free gallons (one-time per account)</p>
+            <p className="mb-3 text-xs text-green-600">
+              Promo applied: +{promoApplied.rewardValue} free gallons · usage {promoApplied.timesUsed ?? 0}/{promoApplied.maxUses ?? 10}
+            </p>
           )}
 
           <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3 text-sm">
