@@ -20,6 +20,14 @@ import {
   CreditCard,
 } from "lucide-react";
 
+function toWhatsAppDigits(phone) {
+  let d = String(phone || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("0")) d = "233" + d.slice(1);
+  if (d.length === 9 && !d.startsWith("233")) d = "233" + d;
+  return d;
+}
+
 export default function HomePage() {
   const [user, setUser] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -41,8 +49,9 @@ export default function HomePage() {
   const deliveryMax = settings?.deliveryTimeMax ?? 60;
   const subPrice = settings?.subscriptionPrice ?? 22;
   const subGallons = settings?.subscriptionGallons ?? 10;
-  const adminPhone = settings?.adminPhone || "0531448824";
-  const adminPhoneDigits = String(adminPhone).replace(/\D/g, "").replace(/^0/, "233");
+  const waDisplay =
+    settings?.whatsappNumber || settings?.adminPhone || "0531448824";
+  const adminPhoneDigits = toWhatsAppDigits(waDisplay);
   const serviceArea = settings?.serviceArea || "Tamale UDS and environs";
   const heroTitle = settings?.heroTitle || "Fresh Water Delivered";
   const productDesc =
@@ -60,7 +69,6 @@ export default function HomePage() {
   const displayName =
     user?.name || user?.username || (user ? "there" : null);
 
-  // Same CTA for hero + bottom — both go to /order
   const orderHref = "/order";
   const orderCtaClassTop =
     "inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0077C8] shadow hover:bg-slate-50";
@@ -274,7 +282,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <a
-              href={`https://wa.me/${adminPhoneDigits}`}
+              href={adminPhoneDigits ? `https://wa.me/${adminPhoneDigits}` : "#"}
               target="_blank"
               rel="noreferrer"
               className="flex items-start gap-3 rounded-2xl border border-green-100 bg-[#F0FDF4] p-5 transition hover:shadow-md"
@@ -285,7 +293,7 @@ export default function HomePage() {
               <div>
                 <p className="font-semibold text-[#0B2545]">WhatsApp</p>
                 <p className="text-sm text-slate-600">
-                  {adminPhone} — Fastest response
+                  {waDisplay} — Fastest response · opens DM
                 </p>
               </div>
             </a>
@@ -319,8 +327,7 @@ export default function HomePage() {
               <div>
                 <p className="font-semibold text-[#0B2545]">Issues?</p>
                 <p className="text-sm text-slate-600">
-                  Late delivery, Wrong Hostel selection. Any other concerns can
-                  be reported to the support team now
+                  Late delivery, wrong hostel — report from your Profile → Submit complaint
                 </p>
               </div>
             </div>
@@ -361,7 +368,7 @@ export default function HomePage() {
             {serviceArea} · Tamale, Northern Region, Ghana
           </p>
           <p className="text-sm text-white/70">
-            Call: {adminPhone} / {momoNumber}
+            Call / WhatsApp: {waDisplay} / {momoNumber}
           </p>
           <p className="mt-3 text-xs text-white/40">
             © {new Date().getFullYear()} BuyWater. Fresh Water Delivered.

@@ -16,11 +16,13 @@ import {
   Building2,
   Tag,
   Megaphone,
+  MessageSquareWarning,
 } from "lucide-react";
 
 const MENU = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "User Directory", icon: Users },
+  { href: "/admin/complaints", label: "User Complaints", icon: MessageSquareWarning },
   { href: "/admin/activity-log", label: "Activity Log", icon: Activity },
   { href: "/admin/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/admin/order-queue", label: "Order Queue", icon: ListOrdered },
