@@ -7,31 +7,31 @@ import { clientIp } from "@/lib/security";
 
 const SUPER = "kugoramoweyipehcaesar49@gmail.com";
 
-export async function DELETE(request) {
-  try {
-    const secret =
-      request.headers.get("x-setup-secret") ||
-      request.headers.get("x-admin-secret");
-    const expected =
-      process.env.SETUP_SECRET || process.env.JWT_SECRET || "buywater-setup";
+async function resetAllOrders(request) {
+  const secret =
+    request.headers.get("x-setup-secret") ||
+    request.headers.get("x-admin-secret");
+  const expected =
+    process.env.SETUP_SECRET || process.env.JWT_SECRET || "buywater-setup";
 
-    let actor = null;
-    if (secret && secret === expected) {
-      actor = { email: SUPER, via: "secret", id: null };
-    } else {
-      const user = await requireAdmin();
-      if (user.email !== SUPER) {
-        return NextResponse.json(
-          { error: "Only super admin can reset all orders" },
-          { status: 403 }
-        );
-      }
-      actor = { email: user.email, via: "session", id: user.id };
+  let actor = null;
+  if (secret && secret === expected) {
+    actor = { email: SUPER, via: "secret", id: null };
+  } else {
+    const user = await requireAdmin();
+    if (user.email !== SUPER && user.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only super admin can reset all orders" },
+        { status: 403 }
+      );
     }
+    actor = { email: user.email, via: "session", id: user.id };
+  }
 
-    const result = await prisma.order.deleteMany({});
-    console.log("[admin] orders reset by", actor.email, "deleted:", result.count);
+  const result = await prisma.order.deleteMany({});
+  console.log("[admin] orders reset by", actor.email, "deleted:", result.count);
 
+  try {
     const ip = clientIp(request);
     await logActivity({
       userId: actor.id,
@@ -40,18 +40,40 @@ export async function DELETE(request) {
       details: `Deleted ${result.count} orders (${actor.via})`,
       ip,
     });
+  } catch (_) {}
 
-    try {
-      revalidatePath("/admin");
-      revalidatePath("/dashboard");
-    } catch (_) {}
+  try {
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    revalidatePath("/admin/order-queue");
+    revalidatePath("/admin/users");
+  } catch (_) {}
 
-    return NextResponse.json({
-      success: true,
-      deleted: result.count,
-      by: actor.email,
-    });
+  return NextResponse.json({
+    success: true,
+    deleted: result.count,
+    by: actor.email,
+  });
+}
+
+export async function POST(request) {
+  try {
+    return await resetAllOrders(request);
   } catch (e) {
+    console.error("[admin] orders reset POST", e);
+    const status = e.status || 500;
+    return NextResponse.json(
+      { error: e.message || "Server error" },
+      { status }
+    );
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    return await resetAllOrders(request);
+  } catch (e) {
+    console.error("[admin] orders reset DELETE", e);
     const status = e.status || 500;
     return NextResponse.json(
       { error: e.message || "Server error" },

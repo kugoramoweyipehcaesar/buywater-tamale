@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Shield,
   Save,
+  MessageCircle,
 } from "lucide-react";
 
 const SUPER = "kugoramoweyipehcaesar49@gmail.com";
@@ -23,13 +24,14 @@ export default function AdminMaintenancePage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [outOfStock, setOutOfStock] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [showReset, setShowReset] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [resetting, setResetting] = useState(false);
 
   function showToast(msg) {
     setToast(msg);
-    setTimeout(() => setToast(""), 3500);
+    setTimeout(() => setToast(""), 4000);
   }
 
   const load = useCallback(async () => {
@@ -48,6 +50,13 @@ export default function AdminMaintenancePage() {
         s.maintenanceMessage ||
           "We're performing scheduled maintenance. Ordering will be back shortly."
       );
+      let extra = {};
+      try {
+        extra = s.contentJson ? JSON.parse(s.contentJson) : {};
+      } catch (_) {}
+      setWhatsappNumber(
+        extra.whatsappNumber || s.adminPhone || s.momoNumber || ""
+      );
     } catch {
       router.push("/admin-login");
     } finally {
@@ -59,7 +68,7 @@ export default function AdminMaintenancePage() {
     load();
   }, [load]);
 
-  async function persist(mode, message, stock) {
+  async function persist(mode, message, stock, wa) {
     setBusy(true);
     try {
       const payload = {
@@ -67,6 +76,10 @@ export default function AdminMaintenancePage() {
         maintenanceMessage: message,
       };
       if (stock !== undefined) payload.outOfStock = stock;
+      if (wa !== undefined) {
+        payload.whatsappNumber = wa;
+        payload.adminPhone = wa;
+      }
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -74,11 +87,6 @@ export default function AdminMaintenancePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      showToast(
-        mode
-          ? "Maintenance ON — public site shows notice"
-          : "Maintenance OFF — site is live"
-      );
       return data;
     } finally {
       setBusy(false);
@@ -90,8 +98,14 @@ export default function AdminMaintenancePage() {
     setMaintenanceMode(next);
     try {
       await persist(next, maintenanceMessage);
+      showToast(
+        next
+          ? "Maintenance ON — public site shows notice"
+          : "Maintenance OFF — site is live"
+      );
     } catch {
       setMaintenanceMode(!next);
+      showToast("Failed to update maintenance");
     }
   }
 
@@ -120,19 +134,35 @@ export default function AdminMaintenancePage() {
     }
   }
 
+  async function saveWhatsApp() {
+    try {
+      await persist(maintenanceMode, maintenanceMessage, undefined, whatsappNumber);
+      showToast("WhatsApp number saved — live on home page");
+    } catch (e) {
+      showToast(e.message || "Save failed");
+    }
+  }
+
   async function resetOrders() {
-    if (confirmText !== "RESET") {
-      showToast('Type RESET to confirm');
+    if (confirmText.trim().toUpperCase() !== "RESET") {
+      showToast("Type RESET to confirm");
       return;
     }
     setResetting(true);
     try {
-      const res = await fetch("/api/admin/orders/reset", { method: "POST" });
+      const res = await fetch("/api/admin/orders/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Reset failed");
-      showToast("Orders reset");
+      showToast(
+        `Orders reset — ${data.deleted ?? 0} deleted. Counts are zero site-wide.`
+      );
       setShowReset(false);
       setConfirmText("");
+      router.refresh();
     } catch (e) {
       showToast(e.message || "Reset failed");
     } finally {
@@ -171,10 +201,35 @@ export default function AdminMaintenancePage() {
           <div>
             <h1 className="text-xl font-bold text-black">Maintenance Mode</h1>
             <p className="text-sm text-slate-500">
-              Toggle site-wide notice and disable ordering for all customers
+              Toggle site-wide notice, WhatsApp, and reset orders
             </p>
           </div>
         </div>
+
+        <section className="mb-4 rounded-2xl border border-green-200 bg-green-50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-green-600" />
+            <h2 className="text-sm font-bold text-green-900">WhatsApp number (home page)</h2>
+          </div>
+          <p className="mb-2 text-xs text-green-800/80">
+            Customers click WhatsApp on the home page and open a DM to this number.
+          </p>
+          <input
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            placeholder="e.g. 0531448824 or 233531448824"
+            className="mb-3 w-full rounded-xl border border-green-200 bg-white px-3 py-2.5 text-sm text-black"
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={saveWhatsApp}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save WhatsApp number
+          </button>
+        </section>
 
         <section className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-center justify-between gap-3">
@@ -261,7 +316,7 @@ export default function AdminMaintenancePage() {
         <section className="mb-4 rounded-2xl border border-red-100 bg-white p-5 shadow-sm">
           <h2 className="mb-2 text-sm font-bold text-black">Danger zone</h2>
           <p className="mb-3 text-xs text-slate-500">
-            Reset all orders (super admin only). This cannot be undone.
+            Reset all orders (super admin only). Deletes every order and zeros order counts site-wide. Cannot be undone.
           </p>
           {!showReset ? (
             <button
@@ -284,9 +339,19 @@ export default function AdminMaintenancePage() {
                 type="button"
                 disabled={resetting}
                 onClick={resetOrders}
-                className="w-full rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white"
+                className="w-full rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {resetting ? "Resetting…" : "Confirm Reset Orders (delete all)"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReset(false);
+                  setConfirmText("");
+                }}
+                className="w-full rounded-xl border py-2 text-sm text-slate-600"
+              >
+                Cancel
               </button>
             </div>
           ) : (

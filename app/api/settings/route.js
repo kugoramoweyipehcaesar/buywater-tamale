@@ -52,10 +52,15 @@ function parseExtra(contentJson) {
   }
 }
 
-function withOutOfStock(settings) {
+function withExtras(settings) {
   if (!settings) return settings;
   const extra = parseExtra(settings.contentJson);
-  return { ...settings, outOfStock: !!extra.outOfStock };
+  return {
+    ...settings,
+    outOfStock: !!extra.outOfStock,
+    whatsappNumber:
+      extra.whatsappNumber || settings.adminPhone || settings.momoNumber || "",
+  };
 }
 
 function pick(body) {
@@ -98,7 +103,7 @@ export async function GET() {
         },
       });
     }
-    return NextResponse.json({ settings: withOutOfStock(settings) });
+    return NextResponse.json({ settings: withExtras(settings) });
   } catch (e) {
     console.error("settings GET", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -111,36 +116,42 @@ export async function PATCH(request) {
     const raw = await request.json();
     const body = pick(raw);
 
-    // outOfStock stored in contentJson (no schema migration required)
+    let settingsRow = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+    const extra = parseExtra(settingsRow?.contentJson);
+
     if (raw.outOfStock !== undefined) {
-      let settingsRow = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
-      const extra = parseExtra(settingsRow?.contentJson);
       extra.outOfStock =
         raw.outOfStock === true ||
         raw.outOfStock === "true" ||
         raw.outOfStock === 1 ||
         raw.outOfStock === "1";
-      body.contentJson = JSON.stringify(extra);
     }
+
+    if (raw.whatsappNumber !== undefined) {
+      extra.whatsappNumber = String(raw.whatsappNumber || "").trim();
+      if (extra.whatsappNumber && body.adminPhone === undefined) {
+        body.adminPhone = extra.whatsappNumber;
+      }
+    }
+
+    // merge other contentJson fields if client sent full contentJson
+    if (raw.contentJson !== undefined && typeof raw.contentJson === "string") {
+      try {
+        const incoming = JSON.parse(raw.contentJson);
+        Object.assign(extra, incoming);
+      } catch (_) {}
+    }
+
+    body.contentJson = JSON.stringify(extra);
 
     if (Object.keys(body).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    let settings = await prisma.appSettings.findFirst({ orderBy: { id: "asc" } });
+    let settings = settingsRow;
     if (!settings) {
       settings = await prisma.appSettings.create({ data: body });
     } else {
-      if (body.contentJson && settings.contentJson && raw.outOfStock === undefined) {
-        try {
-          const incoming = JSON.parse(body.contentJson);
-          const existing = JSON.parse(settings.contentJson);
-          if (incoming.outOfStock === undefined && existing.outOfStock !== undefined) {
-            incoming.outOfStock = existing.outOfStock;
-            body.contentJson = JSON.stringify(incoming);
-          }
-        } catch (_) {}
-      }
       settings = await prisma.appSettings.update({
         where: { id: settings.id },
         data: body,
@@ -156,7 +167,7 @@ export async function PATCH(request) {
       console.warn("revalidatePath", e.message);
     }
 
-    return NextResponse.json({ settings: withOutOfStock(settings), success: true, live: true });
+    return NextResponse.json({ settings: withExtras(settings), success: true, live: true });
   } catch (e) {
     console.error("settings PATCH", e);
     const status = e.status || 500;
