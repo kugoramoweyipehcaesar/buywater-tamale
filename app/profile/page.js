@@ -13,12 +13,12 @@ import {
   Shield,
   LogOut,
   Loader2,
-  Pencil,
   Camera,
   CheckCircle,
   Home,
   Trash2,
   Moon,
+  MessageSquareWarning,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -35,6 +35,8 @@ export default function ProfilePage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [complaint, setComplaint] = useState("");
+  const [sendingComplaint, setSendingComplaint] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -80,6 +82,29 @@ export default function ProfilePage() {
       toast(e.message, false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submitComplaint() {
+    if (!complaint.trim() || complaint.trim().length < 5) {
+      toast("Write at least 5 characters", false);
+      return;
+    }
+    setSendingComplaint(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: complaint.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not send");
+      setComplaint("");
+      toast("Complaint sent to admins");
+    } catch (e) {
+      toast(e.message, false);
+    } finally {
+      setSendingComplaint(false);
     }
   }
 
@@ -362,6 +387,40 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Submit complaint — visible to admins only on /admin/complaints */}
+        <div className="mt-4 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm dark:border-orange-900/40 dark:bg-zinc-900">
+          <div className="mb-2 flex items-center gap-2">
+            <MessageSquareWarning className="h-4 w-4 text-orange-600" />
+            <p className="text-sm font-semibold text-[#0B2545] dark:text-zinc-100">
+              Submit a complaint
+            </p>
+          </div>
+          <p className="mb-2 text-xs text-slate-500 dark:text-zinc-400">
+            Only admins can see this. Describe delivery issues, wrong hostel, or any concern.
+          </p>
+          <textarea
+            value={complaint}
+            onChange={(e) => setComplaint(e.target.value)}
+            rows={4}
+            placeholder="Type your complaint here…"
+            className="mb-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <button
+            type="button"
+            disabled={sendingComplaint || !complaint.trim()}
+            onClick={submitComplaint}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {sendingComplaint ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+              </>
+            ) : (
+              "Send to admins"
+            )}
+          </button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
